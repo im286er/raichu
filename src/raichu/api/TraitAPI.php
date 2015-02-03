@@ -3,7 +3,7 @@ namespace raichu\api;
 
 use raichu\Raichu as raichu;
 
-abstract class AbstractAPI
+trait TraitAPI
 {
 	protected final function requireUser($permission = null, $class = null) {
 		raichu::user_login();

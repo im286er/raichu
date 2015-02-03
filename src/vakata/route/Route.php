@@ -6,6 +6,7 @@ class Route
 	protected $routes = [];
 	protected $all = null;
 	protected $err = null;
+	protected $prefix = '';
 
 	protected function compile($url) {
 		$url = array_filter(explode('/',trim($url, '/')), function ($v) { return $v !== ''; });
@@ -52,6 +53,7 @@ class Route
 						break;
 					case '**':
 						$regex = '[^/]+';
+						$regex = '.*';
 						break;
 					default:
 						$regex = $regex;
@@ -70,15 +72,21 @@ class Route
 		);
 		return $url;
 	}
-	protected function invoke(callable $handler, array $matches = null, \vakata\http\RequestInterface $req = null, \vakata\http\ResponseInterface $res = null) {
-		return call_user_func($handler, $matches, $req, $res);
+	protected function invoke(callable $handler, array $matches = null, \vakata\http\RequestInterface $req = null, \vakata\http\ResponseInterface $res = null, \Exception $e = null) {
+		return call_user_func($handler, $matches, $req, $res, $e);
 	}
 
+	public function with($prefix = '') {
+		$prefix = trim($prefix, '/');
+		$this->prefix = $prefix . (strlen($prefix) ? '/' : '');
+		return $this;
+	}
 	public function add($method, $url = null, $handler = null) {
 		$args    = func_get_args();
 		$handler = array_pop($args);
 		$url     = array_pop($args);
 		$method  = array_pop($args);
+		$url     = $this->prefix . $url;
 
 		if(!$url) {
 			$url = '*';
@@ -132,25 +140,30 @@ class Route
 	public function run(\vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
 		$url = '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/';
 		$arg = explode('/',trim($url, '/'));
-		if(isset($this->all)) {
-			return $this->invoke($this->all, $arg, $req, $res);
-		}
-		if(isset($this->routes[$req->getMethod()])) {
-			foreach($this->routes[$req->getMethod()] as $regex => $route) {
-				if(preg_match($regex, $url, $matches)) {
-					foreach($matches as $k => $v) {
-						if(!is_int($k)) {
-							$arg[$k] = trim($v,'/');
+		try {
+			if(isset($this->all)) {
+				return $this->invoke($this->all, $arg, $req, $res);
+			}
+			if(isset($this->routes[$req->getMethod()])) {
+				foreach($this->routes[$req->getMethod()] as $regex => $route) {
+					if(preg_match($regex, $url, $matches)) {
+						foreach($matches as $k => $v) {
+							if(!is_int($k)) {
+								$arg[$k] = trim($v,'/');
+							}
 						}
+						return $this->invoke($route, $arg, $req, $res);
 					}
-					return $this->invoke($route, $arg, $req, $res);
 				}
 			}
+			throw new RouteException('No matching route found', 404);
 		}
-		if(isset($this->err)) {
-			return $this->invoke($this->err, $arg, $req, $res);
+		catch (\Exception $e) {
+			if(isset($this->err)) {
+				return $this->invoke($this->err, $arg, $req, $res, $e);
+			}
+			throw $e;
 		}
-		throw new RouteException('No matching route found');
 	}
 }
 
