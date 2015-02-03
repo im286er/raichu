@@ -2,6 +2,7 @@
 namespace vakata\database\orm;
 
 use vakata\database\Result;
+use vakata\database\DatabaseException;
 
 class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable
 {
@@ -97,22 +98,33 @@ class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializabl
 		return $this->toArray();
 	}
 
-	public function toArray() {
+	public function toArray($full = true) {
 		$temp = [];
 		foreach($this as $k => $v) {
-			$temp[] = $v->toArray();
+			$temp[] = $v->toArray($full);
 		}
 		return $temp;
 	}
 
 	public function save() {
-		foreach($this->ext as $k => $v) {
-			if($v === false) {
-				$v->delete();
+		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		if(!$wasInTransaction) {
+			$this->tbl->getDatabase()->begin();
+		}
+		try {
+			foreach($this->ext as $k => $v) {
+				if($v === false) {
+					$v->delete();
+				}
+				if($v !== null) {
+					$v->save();
+				}
 			}
-			if($v !== null) {
-				$v->save();
+		} catch (DatabaseException $e) {
+			if($wasInTransaction) {
+				throw $e;
 			}
+			$this->tbl->getDatabase()->rollback();
 		}
 	}
 }

@@ -129,8 +129,8 @@ class Table implements TableInterface, \JsonSerializable
 			$this
 		);
 	}
-	public function all($order = null, $limit = null, $offset = null) {
-		return $this->get($order, $limit, $offset)->toArray();
+	public function all($order = null, $limit = null, $offset = null, $full = true) {
+		return $this->get($order, $limit, $offset)->toArray($full);
 	}
 	public function one($id = null, $order = null, $offset = null) {
 		if($id) {

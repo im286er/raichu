@@ -1,6 +1,8 @@
 <?php
 namespace vakata\database\orm;
 
+use vakata\dabatase\DatabaseException;
+
 class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 {
 	protected $tbl  = null;
@@ -101,13 +103,15 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 	public function jsonSerialize() {
 		return $this->toArray();
 	}
-	public function toArray() {
+	public function toArray($full = true) {
 		if($this->isNull()) {
 			return null;
 		}
 		$temp = array_merge($this->data, $this->chng);
-		foreach($this->inst as $k => $v) {
-			$temp[$k] = $this->{$k}(true);
+		if($full) {
+			foreach($this->inst as $k => $v) {
+				$temp[$k] = $this->{$k}(true);
+			}
 		}
 		return $temp;
 	}
@@ -131,99 +135,121 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 			return null;
 		}
 
-		$id = $this->tbl->getPrimaryKey();
-		$fk = $this->{$id};
-		$nw = false;
-
-		if(!$fk) {
-			$this->chng = array_merge($this->data, $this->chng);
+		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		if(!$wasInTransaction) {
+			$this->tbl->getDatabase()->begin();
 		}
+		try {
+			$id = $this->tbl->getPrimaryKey();
+			$fk = $this->{$id};
+			$nw = false;
 
-		// belongs relations
-		foreach($this->inst as $k => $v) {
-			if(!$v['pivot'] && $v['foreign_key'] === $v['class']->getPrimaryKey()) {
-				// belongs relation, update own field
-				$tmp = $this->{$k}()->save();
-				if($tmp !== null) {
-					$this->chng[$v['local_key']] = $tmp;
-				}
+			if(!$fk) {
+				$this->chng = array_merge($this->data, $this->chng);
 			}
-		}
 
-		// own data
-		if(count($this->chng)) {
-			if($fk) {
-				$col = [];
-				$par = [];
-				foreach($this->chng as $k => $v) {
-					$col[] = $k. ' = ?';
-					$par[] = $v;
-				}
-				$par[] = $this->{$id};
-				$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTable() . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
-			}
-			else {
-				$fk = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTable() . ' ('.implode(', ', array_keys($this->chng)).') VALUES ('.implode(', ', array_fill(0, count($this->chng), '?')).')', array_values($this->chng))->insertId();
-				$nw = true;
-			}
-		}
-
-		// has relations
-		if($fk) {
+			// belongs relations
 			foreach($this->inst as $k => $v) {
-				if($v['pivot']) {
-					$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
-					foreach($this->{$k}() as $item) {
-						$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $item->save()]);
+				if(!$v['pivot'] && $v['foreign_key'] === $v['class']->getPrimaryKey()) {
+					// belongs relation, update own field
+					$tmp = $this->{$k}()->save();
+					if($tmp !== null) {
+						$this->chng[$v['local_key']] = $tmp;
 					}
 				}
+			}
+
+			// own data
+			if(count($this->chng)) {
+				if($fk) {
+					$col = [];
+					$par = [];
+					foreach($this->chng as $k => $v) {
+						$col[] = $k. ' = ?';
+						$par[] = $v;
+					}
+					$par[] = $this->{$id};
+					$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTable() . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
+				}
 				else {
-					if($v['local_key'] === $id) {
-						// set the foreign key on all rows in the collection to $fk
-						if($v['many']) {
-							if($nw) {
-								$this->{$k}()->save();
+					$fk = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTable() . ' ('.implode(', ', array_keys($this->chng)).') VALUES ('.implode(', ', array_fill(0, count($this->chng), '?')).')', array_values($this->chng))->insertId();
+					$nw = true;
+				}
+			}
+
+			// has relations
+			if($fk) {
+				foreach($this->inst as $k => $v) {
+					if($v['pivot']) {
+						$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
+						foreach($this->{$k}() as $item) {
+							$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $item->save()]);
+						}
+					}
+					else {
+						if($v['local_key'] === $id) {
+							// set the foreign key on all rows in the collection to $fk
+							if($v['many']) {
+								if($nw) {
+									$this->{$k}()->save();
+								}
+								else {
+									foreach($this->{$k}() as $kk => $item) {
+										$item->{$v['foreign_key']} = $fk;
+										$item->save();
+									}
+								}
 							}
 							else {
-								foreach($this->{$k}() as $kk => $item) {
-									$item->{$v['foreign_key']} = $fk;
-									$item->save();
+								if(!$this->{$k}()->isNull()) {
+									$this->{$k}()->{$v['foreign_key']} = $fk;
+									$this->{$k}()->save();
 								}
 							}
 						}
-						else {
-							if(!$this->{$k}()->isNull()) {
-								$this->{$k}()->{$v['foreign_key']} = $fk;
-								$this->{$k}()->save();
-							}
-						}
 					}
 				}
 			}
+		} catch (DatabaseException $e) {
+			if($wasInTransaction) {
+				throw $e;
+			}
+			$this->tbl->getDatabase()->rollback();
 		}
 
 		return $fk;
 	}
 	public function delete() {
-		$id = $this->tbl->getPrimaryKey();
-		$fk = $this->{$id};
+		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		if(!$wasInTransaction) {
+			$this->tbl->getDatabase()->begin();
+		}
+		try {
+			$id = $this->tbl->getPrimaryKey();
+			$fk = $this->{$id};
 
-		foreach($this->inst as $k => $v) {
-			if($v['pivot'] && $fk) {
-				$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
-			}
-			else {
-				if($v['local_key'] === $id) {
-					// set the foreign key on all rows in the collection to $fk
-					foreach($this->{$v['field']}() as $k => $item) {
-						unset($this->{$v['field']}()[$k]);
-						$item->delete();
+			foreach($this->inst as $k => $v) {
+				if($v['pivot'] && $fk) {
+					$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
+				}
+				else {
+					if($v['local_key'] === $id) {
+						// set the foreign key on all rows in the collection to $fk
+						foreach($this->{$v['field']}() as $k => $item) {
+							unset($this->{$v['field']}()[$k]);
+							$item->delete();
+						}
 					}
 				}
 			}
-		}
-		if($fk) {
-			$this->tbl->getDatabase()->query('DELETE FROM ' . $this->tbl->getTable() . ' WHERE id = ?', [$fk]);
+			if($fk) {
+				$this->tbl->getDatabase()->query('DELETE FROM ' . $this->tbl->getTable() . ' WHERE id = ?', [$fk]);
+			}
+		} catch (DatabaseException $e) {
+			if($wasInTransaction) {
+				throw $e;
+			}
+			$this->tbl->getDatabase()->rollback();
 		}
 	}
 }
