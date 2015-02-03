@@ -23,4 +23,5 @@ interface DriverInterface
 	public function begin();
 	public function commit();
 	public function rollback();
+	public function isTransaction();
 }

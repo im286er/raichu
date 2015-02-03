@@ -6,6 +6,7 @@ class Postgre extends AbstractDriver
 {
 	protected $iid = 0;
 	protected $aff = 0;
+	protected $transaction = false;
 	public function __construct($settings) {
 		parent::__construct($settings);
 		if(!$this->settings->serverport) {
@@ -104,14 +105,17 @@ class Postgre extends AbstractDriver
 	public function begin() {
 		$this->connect();
 		try {
+			$this->transaction = true;
 			$this->query('BEGIN');
 		} catch(DatabaseException $e) {
+			$this->transaction = false;
 			return false;
 		}
 		return true;
 	}
 	public function commit() {
 		$this->connect();
+		$this->transaction = false;
 		try {
 			$this->query('COMMIT');
 		} catch(DatabaseException $e) {
@@ -121,12 +125,16 @@ class Postgre extends AbstractDriver
 	}
 	public function rollback() {
 		$this->connect();
+		$this->transaction = false;
 		try {
 			$this->query('ROLLBACK');
 		} catch(DatabaseException $e) {
 			return false;
 		}
 		return true;
+	}
+	public function isTransaction() {
+		return $this->transaction;
 	}
 	public function free($result) {
 		@pg_free_result($result);

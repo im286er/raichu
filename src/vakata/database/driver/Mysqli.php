@@ -7,6 +7,7 @@ class Mysqli extends AbstractDriver
 	protected $iid = 0;
 	protected $aff = 0;
 	protected $mnd = false;
+	protected $transaction = false;
 
 	public function __construct($settings) {
 		parent::__construct($settings);
@@ -197,10 +198,18 @@ class Mysqli extends AbstractDriver
 
 	public function begin() {
 		$this->connect();
-		return $this->lnk->autocommit(false);
+		$this->transaction = true;
+		try {
+			$this->lnk->autocommit(false);
+			return true;
+		} catch(DatabaseException $e) {
+			$this->transaction = false;
+			return false;
+		}
 	}
 	public function commit() {
 		$this->connect();
+		$this->transaction = false;
 		if(!$this->lnk->commit()) {
 			return false;
 		}
@@ -208,10 +217,14 @@ class Mysqli extends AbstractDriver
 	}
 	public function rollback() {
 		$this->connect();
+		$this->transaction = false;
 		if(!$this->lnk->rollback()) {
 			return false;
 		}
 		return $this->lnk->autocommit(true);
+	}
+	public function isTransaction() {
+		return $this->transaction;
 	}
 	public function free($result) {
 		return $this->mnd ? @$result->free() : @$result->free_result();

@@ -121,6 +121,9 @@ class Ibase extends AbstractDriver
 		$this->transaction = null;
 		return true;
 	}
+	public function isTransaction() {
+		return ($this->transaction !== null);
+	}
 	public function free($result) {
 		@\ibase_free_result($result);
 	}

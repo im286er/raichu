@@ -159,6 +159,14 @@ class DB implements DatabaseInterface
 	public function rollback() {
 		$this->drv->rollback();
 	}
+	/**
+	 * Връщане на транзакция до предишен стейт
+	 * @method isTransaction
+	 * @return boolean   Индикатор дали в момента сме в транзакция
+	 */
+	public function isTransaction() {
+		$this->drv->isTransaction();
+	}
 
 	public function __call($method, $args) {
 		if($this->rsl && is_callable(array($this->rsl, $method))) {

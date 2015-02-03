@@ -124,6 +124,9 @@ class Oracle extends AbstractDriver
 		$this->transaction = false;
 		return true;
 	}
+	public function isTransaction() {
+		return $this->transaction;
+	}
 
 	/*
 	public function insert_id($name = null) {

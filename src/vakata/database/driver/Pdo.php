@@ -100,6 +100,9 @@ class Pdo extends AbstractDriver
 		$this->connect();
 		return $this->lnk->rollBack();
 	}
+	public function isTransaction() {
+		return $this->lnk->inTransaction();
+	}
 	public function free($result) {
 		unset($result);
 		$result = null;

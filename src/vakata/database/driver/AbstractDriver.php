@@ -83,6 +83,9 @@ abstract class AbstractDriver implements DriverInterface
 	public function rollback() {
 		return false;
 	}
+	public function isTransaction() {
+		return false;
+	}
 	public function free($result) {
 	}
 
