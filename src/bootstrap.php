@@ -33,9 +33,9 @@ set_exception_handler(function ($e) {
 	echo '<h1 style="font-size:1.4em; text-align:center; margin:2em 0 0 0; color:#8b0000; text-shadow:1px 1px 0 white;">В момента не можем да обслужим заявката Ви.</h1>' . "\n\n";
 
 	if(defined('DEBUG') && DEBUG) {
-		echo '<h2 style="color:#222; font-size:1.2em; margin:1em 0 1em 0; text-align:center; text-shadow:1px 1px 0 white;">' . $e->getMessage() . '</h2>';
+		echo '<h2 style="color:#222; font-size:1.2em; margin:1em 0 1em 0; text-align:center; text-shadow:1px 1px 0 white;">' . preg_replace('/, called in.*/','',$e->getMessage()) . '</h2>';
 		echo '<pre style="max-width:960px; margin:1em auto; border:1px solid silver; background:white; border-radius:4px; padding-bottom:1em; overflow:hidden;">';
-		echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:0.5em;">'.(@$e->getFile()).' : '.(@$e->getLine()).'</strong>';
+		echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:1em;">'.(@$e->getFile()).' : '.(@$e->getLine()).'</strong>';
 		$file = @file($e->getFile());
 		$line = (int)@$e->getLine() - 1;
 		if($file && $line) {
@@ -46,6 +46,23 @@ set_exception_handler(function ($e) {
 			}
 		}
 		echo '</pre>';
+		echo '<pre style="max-width:960px; margin:1em auto; border:1px solid silver; background:white; border-radius:4px; padding-bottom:1em; overflow:hidden;">';
+		echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:1em;">Trace</strong>';
+		foreach($e->getTrace() as $k => $trace) {
+			echo '<p style="margin:0; padding:0 1em; line-height:2em; '.($k%2 == 1 ? 'background:#ebebeb' : '').'">';
+			echo '<span style="display:inline-block; min-width:500px;"><code style="color:green">'.$trace['file'].'</code>';
+			echo '<code style="color:gray"> : </code>';
+			echo '<code style="color:#8b0000">'.$trace['line'].'</code></span> ';
+			if(isset($trace['class'])) {
+				echo '<code style="color:navy">'.$trace['class'].$trace['type'].$trace['function'].'()</code>';
+			}
+			else {
+				echo '<code style="color:navy">'.$trace['function'].'()</code>';
+			}
+			echo '</p>';
+		}
+		echo '</pre>';
+		
 	}
 	echo '</body></html>';
 	die();
