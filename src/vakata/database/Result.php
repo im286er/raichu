@@ -1,7 +1,7 @@
 <?php
 namespace vakata\database;
 
-class Result implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable 
+class Result implements ResultInterface, \JsonSerializable 
 {
 	protected $all  = null;
 	protected $rdy  = false;

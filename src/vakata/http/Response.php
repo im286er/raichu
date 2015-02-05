@@ -126,7 +126,7 @@ class Response implements ResponseInterface
 			}
 		}
 		if($this->body !== null && strlen($this->body)) {
-			$type = explode(';',$this->getHeader('Content-Type'))[0];
+			$type = explode(';', $this->getHeader('Content-Type'))[0];
 			foreach($this->filters as $filter) {
 				$this->body = call_user_func($filter, $this->body, $type);
 			}

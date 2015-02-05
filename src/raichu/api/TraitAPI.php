@@ -5,37 +5,25 @@ use raichu\Raichu as raichu;
 
 trait TraitAPI
 {
-	protected final function requireUser($permission = null, $class = null) {
-		raichu::user_login();
-		if(!raichu::user_is_valid() && isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
-			raichu::user_login(['username' => $_SERVER['PHP_AUTH_USER'], 'password' => $_SERVER['PHP_AUTH_PW']]);
-		}
-		if(!raichu::user_is_valid() && raichu::input_header('Authorization')) {
-			$temp = explode(' ',raichu::input_header('Authorization'));
-			if(strtolower($temp[0]) === 'basic') {
-				$temp[1] = base64_decode($temp[1]);
-				$temp[1] = explode(':', $temp[1], 2);
-				raichu::user_login(['username' => $temp[1][0], 'password' => $temp[1][1]]);
-			}
-			if(strtolower($temp[0]) === 'token' || strtolower($temp[0]) === 'bearer' || strtolower($temp[0]) === 'oauth') {
-				raichu::user_login(['token' => $temp[1]]);
-			}
-		}
+	protected final function requireUser() {
+		raichu::user()->login(raichu::request()->getAuthorization());
 		if(!raichu::user_is_valid()) {
 			throw new APIException('Invalid user', 401);
 		}
-		if($permission && !$this->has_permission($class ? $class : basename(str_replace('\\', '/', get_class($this))), $permission)) {
-			throw new APIException('Invalid action', 403);
-		}
 	}
-	protected final function requireAdmin($permission = null, $class = null) {
-		$this->require_user($permission, $class);
-		if(!raichu::user("admin")) {
+	protected final function requireAdmin() {
+		$this->requireUser();
+		if(!raichu::user()->admin) {
 			throw new APIException('Invalid user', 403);
 		}
 	}
+	protected final function requirePermission($permission, $class = null) {
+		if(!$this->hasPermission($class ? $class : basename(str_replace('\\', '/', get_class($this))), $permission)) {
+			throw new APIException('Invalid action', 403);
+		}
+	}
 	protected final function hasPermission($class, $method = null) {
-		$permissions = @json_decode(raichu::user("permissions"), true);
+		$permissions = @json_decode(raichu::user()->permissions, true);
 		return	$permissions && 
 				is_array($permissions) && 
 				(
@@ -68,3 +56,23 @@ trait TraitAPI
 	}
 	*/
 }
+
+/*
+	protected final function hasRead($class, $field) {
+		$permissions = @json_decode(raichu::user("permissions"), true);
+		return	$permissions && 
+				is_array($permissions) && 
+				isset($permissions[$class]) &&
+				isset($permissions[$class]['fields_r']) &&
+				isset($permissions[$class]['fields_r'][$field]);
+	}
+	protected final function hasWrite($class, $field) {
+		$permissions = @json_decode(raichu::user("permissions"), true);
+		return	$permissions && 
+				is_array($permissions) && 
+				isset($permissions[$class]) &&
+				isset($permissions[$class]['fields_w']) &&
+				isset($permissions[$class]['fields_w'][$field]);
+	}
+}
+*/

@@ -86,11 +86,17 @@ class Route
 		$handler = array_pop($args);
 		$url     = array_pop($args);
 		$method  = array_pop($args);
-		$url     = $this->prefix . $url;
+
+		if(!$method && (is_array($url) || in_array($url, ['GET','HEAD','POST','PATCH','DELETE','PUT','OPTIONS']))) {
+			$method = $url;
+			$url = null;
+		}
 
 		if(!$url) {
-			$url = '*';
+			$url = '{**}';
 		}
+		$url     = $this->prefix . $url;
+
 		if(!$method) {
 			$method = ['GET','POST'];
 		}
@@ -120,6 +126,9 @@ class Route
 		return $this->add('HEAD', $url, $handler);
 	}
 	public function put($url, callable $handler) {
+		return $this->add('PUT', $url, $handler);
+	}
+	public function patch($url, callable $handler) {
 		return $this->add('PUT', $url, $handler);
 	}
 	public function delete($url, callable $handler) {
@@ -166,120 +175,3 @@ class Route
 		}
 	}
 }
-
-/*
-class Route
-{
-	protected $routes = [];
-	protected $error = null;
-
-	protected function compile($url) {
-		$url = array_filter(explode('/',trim($url, '/')), function ($v) { return $v !== ''; });
-		if(!count($url)) {
-			return '(^/+$)ui';
-		}
-		if(count($url) === 1 && $url[0] === '*') {
-			return '(^.*$)ui';
-		}
-		foreach($url as $k => $u) {
-			//if($k === count($url) - 1) {
-			//	$u = preg_replace_callback('(.\[([^\]:]*)(:[^\]]+)?\](\?)?$)', function ($matches) {
-			//		return '[\.(' . $this->expand($matches[1]) . ')' . (isset($matches[2]) && strlen($matches[2]) ? $matches[2] : '') . ']' . (isset($matches[3]) ? $matches[3] : '');
-			//	}, $u);
-			//}
-			if($u === '*') {
-				$url[$k] = '([^/]+)/';
-			}
-			else if(strpos($u, '[') === false) {
-				$url[$k] = $u . '/';
-			}
-			else if(preg_match('(^\[([^\]:]*)(:[^\]]+)?\](\?)?$)', $u, $matches)) {
-				$url[$k] = '(' . ( isset($matches[2]) && strlen($matches[2]) ? '?P<'.preg_quote(str_replace(':','',$matches[2])).'>' : '') . $this->expand($matches[1]) . '/)' . (isset($matches[3]) ? $matches[3] : '');
-			}
-			else {
-				$u = preg_replace_callback('(^([\]]+)\[)', function ($matches) { return preg_quote($matches[1]).'['; }, $u);
-				$u = preg_replace_callback('((\]\??)([\[]+)\[)', function ($matches) { return $matches[1] . preg_quote($matches[2]) . '['; }, $u);
-				$u = preg_replace_callback('((\]\??)([\[]+)$)', function ($matches) { return $matches[1] . ($matches[2] !== '?' ? preg_quote($matches[2]) : '?'); }, $u);
-				$u = preg_replace_callback('(\[([^\]:]*)(:[^\]]+)?\](\?)?)', function ($matches) {
-					return '(' . ( isset($matches[2]) ? '?P<'.preg_quote(str_replace(':','',$matches[2])).'>' : '') . $this->expand($matches[1]) . '/)' . (isset($matches[3]) ? $matches[3] : ''); }, $u);
-				$url[$k] = $u;
-			}
-		}
-		$url = '(^/' . implode('', $url) . '$)ui';
-		if(@preg_match($url, '') === false) {
-			throw new RouteException('Could not compile route regex');
-		}
-		return $url;
-	}
-	protected function expand($match) {
-		switch($match) {
-			case '' :
-			case '*':
-				return '[^/]+';
-			case 'i':
-				return '\d+';
-			case 'a':
-				return '[A-Za-z]+';
-			case 'h':
-				return '[A-Za-z0-9]+';
-			case '**':
-				return '.*';
-			default :
-				return $match;
-		}
-	}
-	protected function invoke(callable $handler = null, array $matches = null) {
-		return $handler !== null ? call_user_func($handler, $matches) : null;
-	}
-
-	public function add($method, $url = null, $handler = null) {
-		$args    = func_get_args();
-		$handler = array_pop($args);
-		$url     = array_pop($args);
-		$method  = array_pop($args);
-
-		if(!$url) {
-			$url = '*';
-		}
-		if(!$method) {
-			$method = ['GET','POST'];
-		}
-		if(!is_array($method)) {
-			$method = [ $method ];
-		}
-		if(!is_callable($handler)) {
-			throw new RouteException('No valid handler found');
-		}
-
-		$url = $this->compile($url);
-		foreach($method as $m) {
-			if(!isset($this->routes[$m])) {
-				$this->routes[$m] = [];
-			}
-			$this->routes[$m][$url] = $handler;
-		}
-	}
-	public function err(callable $handler) {
-		$this->error = $handler;
-	}
-
-	public function handle($url) {
-		$url = '/'.trim($url, '/').'/';
-		$arg = explode('/',trim($url, '/'));
-
-		if(isset($this->routes[$_SERVER['REQUEST_METHOD']])) {
-			foreach($this->routes[$_SERVER['REQUEST_METHOD']] as $regex => $route) {
-				if(preg_match($regex, $url, $matches)) {
-					foreach($matches as $k => $v) {
-						if(!is_int($k)) {
-							$arg[$k] = trim($v,'/');
-						}
-					}
-					return $this->invoke($route, $arg);
-				}
-			}
-		}
-		return $this->invoke($this->error, $arg);
-	}
-}
-*/

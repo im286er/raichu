@@ -3,7 +3,7 @@ namespace vakata\database\orm;
 
 use vakata\dabatase\DatabaseException;
 
-class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
+class TableRow implements TableRowInterface, \JsonSerializable
 {
 	protected $tbl  = null;
 	protected $data = [];
@@ -29,11 +29,12 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 		}
 	}
 
-	public function keys() {
-		return array_filter(array_unique(array_merge(array_keys($this->data), array_keys($this->chng), array_keys($this->inst))));
+	public function getID() {
+		$pk = $this->tbl->getPrimaryKey();
+		return $this->{$pk};
 	}
-	public function count() {
-		return count($this->keys());
+	public function getTable() {
+		return $this->tbl;
 	}
 
 	public function offsetGet($offset) {
@@ -47,7 +48,7 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 		$this->__set($offset, $value);
 	}
 	public function offsetExists($offset) {
-		return in_array($offset, $this->keys());
+		return in_array($offset, array_filter(array_unique(array_merge(array_keys($this->data), array_keys($this->chng), array_keys($this->inst)))));
 	}
 	public function offsetUnset($offset) {
 		if(isset($this->chng[$offset])) {
@@ -62,40 +63,52 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 		if(!isset($this->inst[$key])) {
 			return null;
 		}
-		if(!isset($this->cche[$key])) {
+		$ckey = $key;
+		if(count($args)) {
+			$ckey .= '_' . md5(serialize($args));
+		}
+		if(!isset($this->cche[$ckey])) {
 			$inst = $this->inst[$key];
 			$lkey = $inst['local_key'];
 			$pkey = $this->tbl->getPrimaryKey();
+
+			if(isset($args[0]) && (is_int($args[0]) || is_numeric($args[0]))) {
+				$args[1] = [ (int)$args[0] ];
+				$args[0] = ' '.$inst['class']->getPrimaryKey().' = ? ';
+			}
+			if(!isset($args[0])) { $args[0] = ' 1 = 1 '; }
+			if(!isset($args[1])) { $args[1] = []; }
+			if(!isset($args[2])) { $args[2] = null; }
+			if(!isset($args[3])) { $args[3] = null; }
+			if(!isset($args[4])) { $args[4] = null; }
 
 			if($inst['pivot']) {
 				$ids = $this->{$pkey} ? 
 					$this->tbl->getDatabase()->all('SELECT ' . $inst['foreign_key'] . ' FROM ' . $inst['pivot'] . ' WHERE ' . $inst['local_key'] . ' = ?', [$this->{$pkey}]) : 
 					[];
 				if(count($ids)) {
-					$inst['class']->filter($inst['class']->getPrimaryKey() . ' IN ('.implode(',',array_fill(0, count($ids), '?')).')', $ids);
+					$this->cche[$ckey] = $inst['class']->read($inst['class']->getPrimaryKey() . ' IN ('.implode(',',array_fill(0, count($ids), '?')).') AND ('.$args[0].') ', array_merge($ids, $args[1]), $args[2], $args[3], $args[4]);
 				}
 				else {
-					$inst['class']->filter('1 = 0');
+					$this->cche[$ckey] = $inst['class']->read('1 = 0');
 				}
 			}
 			else {
 				if($this->{$lkey}) {
-					$inst['class']->filter($inst['foreign_key'] . ' = ?', [$this->{$lkey}]);
+					$this->cche[$ckey] = $inst['class']->read($inst['foreign_key'] . ' = ? AND ('.$args[0].') ', array_merge([$this->{$lkey}], $args[1]), $args[2], $args[3], $args[4]);
 				}
 				else {
-					$inst['class']->filter('1 = 0');
+					$this->cche[$ckey] = $inst['class']->read('1 = 0');
 				}
 			}
-
-			$this->cche[$key] = $inst['class']->get(); // : $inst['class']->one();
 		}
 		if($this->inst[$key]['many']) {
-			return isset($args[0]) && $args[0] === true ? $this->cche[$key]->toArray() : $this->cche[$key];
+			return $this->cche[$ckey];
 		}
-		if(!isset($this->cche[$key][0])) {
-			$this->cche[$key][] = [];
+		if(!isset($this->cche[$ckey][0])) {
+			$this->cche[$ckey][] = [];
 		}
-		return isset($args[0]) && $args[0] === true ? ($this->cche[$key][0]->isNull() ? null : $this->cche[$key][0]->toArray()) : $this->cche[$key][0];
+		return $this->cche[$ckey][0];
 	}
 	public function __debugInfo() {
 		return $this->toArray();
@@ -110,13 +123,11 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 		$temp = array_merge($this->data, $this->chng);
 		if($full) {
 			foreach($this->inst as $k => $v) {
-				$temp[$k] = $this->{$k}(true);
+				$temp[$k] = $this->{$k}()->toArray(true);
 			}
 		}
 		return $temp;
 	}
-
-
 	public function fromArray(array $data) {
 		foreach($data as $k => $v) {
 			$this->__set($k, $v);
@@ -127,7 +138,7 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 			$this->chng[$key] = $value;
 		}
 	}
-	public function isNull() {
+	protected function isNull() {
 		return count($this->chng) + count($this->data) === 0;
 	}
 	public function save() {
@@ -162,17 +173,10 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 			// own data
 			if(count($this->chng)) {
 				if($fk) {
-					$col = [];
-					$par = [];
-					foreach($this->chng as $k => $v) {
-						$col[] = $k. ' = ?';
-						$par[] = $v;
-					}
-					$par[] = $this->{$id};
-					$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTable() . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
+					$this->tbl->update($this->chng);
 				}
 				else {
-					$fk = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTable() . ' ('.implode(', ', array_keys($this->chng)).') VALUES ('.implode(', ', array_fill(0, count($this->chng), '?')).')', array_values($this->chng))->insertId();
+					$fk = $this->tbl->create($this->chng);
 					$nw = true;
 				}
 			}
@@ -243,13 +247,16 @@ class TableRow implements \ArrayAccess, \Countable, \JsonSerializable
 				}
 			}
 			if($fk) {
-				$this->tbl->getDatabase()->query('DELETE FROM ' . $this->tbl->getTable() . ' WHERE id = ?', [$fk]);
+				$temp = [];
+				$temp[$this->tbl->getPrimaryKey()] = $fk;
+				$this->tbl->delete($temp);
 			}
 		} catch (DatabaseException $e) {
 			if($wasInTransaction) {
 				throw $e;
 			}
 			$this->tbl->getDatabase()->rollback();
+			throw $e;
 		}
 	}
 }

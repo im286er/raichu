@@ -1,10 +1,10 @@
 <?php
 namespace vakata\database\orm;
 
-use vakata\database\Result;
+use vakata\database\ResultInterface;
 use vakata\database\DatabaseException;
 
-class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable
+class TableRows implements TableRowsInterface, \JsonSerializable
 {
 	protected $db  = null;
 	protected $col = null;
@@ -13,7 +13,7 @@ class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializabl
 	protected $ext = [];
 	protected $del = 0;
 
-	public function __construct(Result $col, TableInterface $tbl) {
+	public function __construct(ResultInterface $col, TableInterface $tbl) {
 		$this->col = $col;
 		$this->tbl = $tbl;
 
@@ -31,6 +31,39 @@ class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializabl
 		return $this->ext[$key] = new TableRow($this->tbl, $data);
 	}
 
+	public function getTable() {
+		return $this->tbl;
+	}
+	public function toArray($full = true) {
+		$temp = [];
+		foreach($this as $k => $v) {
+			$temp[] = $v->toArray($full);
+		}
+		return $temp;
+	}
+	public function save() {
+		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		if(!$wasInTransaction) {
+			$this->tbl->getDatabase()->begin();
+		}
+		try {
+			foreach($this->ext as $k => $v) {
+				if($v === false) {
+					$v->delete();
+				}
+				if($v !== null) {
+					$v->save();
+				}
+			}
+		} catch (DatabaseException $e) {
+			if($wasInTransaction) {
+				throw $e;
+			}
+			$this->tbl->getDatabase()->rollback();
+		}
+	}
+
+	/* ARRAY FUNCTIONS */
 	public function offsetGet($offset) {
 		if(!$this->offsetExists($offset) || !array_key_exists($offset, $this->ext) || $this->ext[$offset] === false) {
 			return null;
@@ -62,11 +95,9 @@ class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializabl
 			$this->del++;
 		}
 	}
-
 	public function count() {
 		return count($this->ext) - $this->del;
 	}
-
 	public function current() {
 		if($temp = current($this->ext)) {
 			return $temp;
@@ -91,40 +122,11 @@ class TableRows implements \Iterator, \ArrayAccess, \Countable, \JsonSerializabl
 		return key($this->ext) !== null;
 	}
 
+	/* helpers */
 	public function __debugInfo() {
 		return $this->toArray();
 	}
 	public function jsonSerialize() {
 		return $this->toArray();
-	}
-
-	public function toArray($full = true) {
-		$temp = [];
-		foreach($this as $k => $v) {
-			$temp[] = $v->toArray($full);
-		}
-		return $temp;
-	}
-
-	public function save() {
-		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
-		if(!$wasInTransaction) {
-			$this->tbl->getDatabase()->begin();
-		}
-		try {
-			foreach($this->ext as $k => $v) {
-				if($v === false) {
-					$v->delete();
-				}
-				if($v !== null) {
-					$v->save();
-				}
-			}
-		} catch (DatabaseException $e) {
-			if($wasInTransaction) {
-				throw $e;
-			}
-			$this->tbl->getDatabase()->rollback();
-		}
 	}
 }

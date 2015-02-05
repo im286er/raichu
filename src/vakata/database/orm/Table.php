@@ -3,19 +3,16 @@ namespace vakata\database\orm;
 
 use vakata\database\DatabaseInterface;
 
-class Table implements TableInterface, \JsonSerializable
+class Table implements TableInterface
 {
 	protected $db = null;
 	protected $tb = null;
 	protected $pk = null;
 	protected $fd = [];
 	protected $rl = [];
+	protected $tx = [];
 
-	protected $whe = '1 = 1';
-	protected $par = null;
-	protected $col = null;
-
-	public function __construct(DatabaseInterface $db, $tb, $pk = null, array $fd = null) {
+	public function __construct(DatabaseInterface $db, $tb, $pk = null, array $fd = null, array $tx = null) {
 		$this->db = $db;
 		$this->tb = $tb;
 
@@ -27,12 +24,16 @@ class Table implements TableInterface, \JsonSerializable
 			if(!$fd) {
 				$fd = $tmp['columns'];
 			}
+			if(!$tx) {
+				$tx = $tmp['indexed'];
+			}
 			//$pk = $tmp['pk'] ? $tmp['pk'] : $pk;
 			//$fd = $tmp['fields'];
 		}
 
 		$this->pk = $pk ? $pk : 'id';
 		$this->fd = count($fd) ? $fd : [$this->pk];
+		$this->tx = $tx ? $tx : [];
 		if(is_array($this->fd)) {
 			$this->fd[] = $this->pk;
 			$this->fd = array_unique($this->fd);
@@ -40,7 +41,7 @@ class Table implements TableInterface, \JsonSerializable
 	}
 
 	public function getDefinition() {
-		$res = [ 'columns' => [], 'primary_key' => null, 'definitions' => [] ];
+		$res = [ 'columns' => [], 'primary_key' => null, 'definitions' => [], 'indexed' => [] ];
 		switch($this->db->driver()) {
 			case 'mysql':
 			case 'mysqli':
@@ -51,6 +52,10 @@ class Table implements TableInterface, \JsonSerializable
 						$res['primary_key'] = $data['Field'];
 					}
 				}
+				foreach($this->db->all('SHOW INDEX FROM '.$this->tb.' WHERE Index_type = \'FULLTEXT\'') as $data) {
+					$res['indexed'][] = $data['Column_name'];
+				}
+				$res['indexed'] = array_unique($res['indexed']);
 				break;
 			case 'postgre':
 			case 'oracle':
@@ -78,12 +83,12 @@ class Table implements TableInterface, \JsonSerializable
 	public function manyToMany($tb, $pivot = null, $field = null) {
 		return $this->addRelation($tb, $this->tb . '_' . $this->pk, null, true, $pivot ? $pivot : $this->tb . '_' . $pivot, $field);
 	}
-	public function addRelation($tb, $local_key, $foreign_key = null, $many = true, $pivot = null, $field = null) {
+	protected function addRelation($tb, $local_key, $foreign_key = null, $many = true, $pivot = null, $field = null) {
 		$temp = $tb instanceof Table ? $tb : new Table($this->db, $tb);
 		if(!$foreign_key) {
 			$foreign_key = ($pivot ? $temp->getTable() . '_' : '') . $temp->getPrimaryKey();
 		}
-		$this->rl[] = [
+		$this->rl[$field ? $field : $tb . '_' . $local_key] = [
 			'table'       => $temp,
 			'local_key'   => $local_key,
 			'foreign_key' => $foreign_key,
@@ -95,7 +100,13 @@ class Table implements TableInterface, \JsonSerializable
 	}
 
 	public function getTable() {
+		return $this;
+	}
+	public function getTableName() {
 		return $this->tb;
+	}
+	public function getIndexed() {
+		return $this->tx;
 	}
 	public function getColumns() {
 		return $this->fd;
@@ -106,10 +117,62 @@ class Table implements TableInterface, \JsonSerializable
 	public function getRelations() {
 		return $this->rl;
 	}
+	public function getRelationKeys() {
+		return array_keys($this->rl);
+	}
 	public function getDatabase() {
 		return $this->db;
 	}
 
+	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false) {
+		if(!$filter) {
+			$filter = '1 = 1';
+		}
+		$temp = new TableRows(
+			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
+			$this
+		);
+		return $is_single ? (isset($temp[0]) ? $temp[0] : null) : $temp;
+	}
+
+	public function create(array $data) {
+		$temp = [];
+		foreach($data as $k => $v) {
+			if(in_array($k, $this->fd)) {
+				$temp[$k] = $v;
+			}
+		}
+		if(!count($temp)) {
+			throw new ORMException('Nothing to insert');
+		}
+		return $this->getDatabase()->query('INSERT INTO ' . $this->tb . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
+	}
+	public function update(array $data) {
+		if(!isset($data[$this->getPrimaryKey()])) {
+			throw new ORMException('Can not update without primary key');
+		}
+		$col = [];
+		$par = [];
+		foreach($data as $k => $v) {
+			if(in_array($k, $this->fd)) {
+				$col[] = $k. ' = ?';
+				$par[] = $v;
+			}
+		}
+		if(count($col)) {
+			$par[] = $data[$this->getPrimaryKey()];
+			$this->getDatabase()->query('UPDATE ' . $this->tb . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
+		}
+		return $data[$this->getPrimaryKey()];
+	}
+	public function delete(array $data) {
+		if(!isset($data[$this->getPrimaryKey()])) {
+			throw new ORMException('Can not update without primary key');
+		}
+		$this->getDatabase()->query('DELETE FROM ' . $this->tb . ' WHERE id = ?', [$data[$this->getPrimaryKey()]]);
+	}
+
+	/*
 	public function filter($sql, array $par = []) {
 		if(is_int($sql) || is_numeric($sql)) {
 			$par = [ (int)$sql ];
@@ -123,12 +186,7 @@ class Table implements TableInterface, \JsonSerializable
 		return $this->whe !== null ? $this->db->one('SELECT COUNT(*) AS cnt FROM ' . $this->tb . ' WHERE ' . $this->whe, $this->par) : 0;
 	}
 
-	public function get($order = null, $limit = null, $offset = null) {
-		return new TableRows(
-			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $this->whe . ( $order ? ' ORDER BY ' . $order : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $this->par),
-			$this
-		);
-	}
+
 	public function all($order = null, $limit = null, $offset = null, $full = true) {
 		return $this->get($order, $limit, $offset)->toArray($full);
 	}
@@ -167,6 +225,7 @@ class Table implements TableInterface, \JsonSerializable
 	}
 
 	public function jsonSerialize() {
-		return $this->all();
+		return $this->getRows()->toArray(true);
 	}
+	*/
 }

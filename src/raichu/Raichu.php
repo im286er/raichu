@@ -6,6 +6,7 @@ class Raichu
 	private static $instance = null;
 	private $dice = null;
 	private $cache = [];
+	private $api = null;
 
 	private function __construct() {
 		$this->dice = new \Dice\Dice;
@@ -20,6 +21,10 @@ class Raichu
 		$shared = new \Dice\Rule;
 		$subs = new \Dice\Rule;
 		$shared->shared = true;
+
+		if(isset($settings['appname'])) {
+			$raichu->api = $settings['appname'];
+		}
 
 		if(isset($settings['database']) && $settings['database']) {
 			$raichu->dice->addRule('vakata\\database\\DB', $shared);
@@ -116,7 +121,7 @@ class Raichu
 			$auth = [];
 			if(isset($settings['user']['oauth']) && is_array($settings['user']['oauth'])) {
 				foreach($settings['user']['oauth'] as $provider => $args) {
-					$args[] = $raichu::url_get('login/' . $provider . '/callback');
+					$args[] = $rq->getUrlBase() . 'login/' . $provider . '/callback';
 					$auth[] = $raichu->dice->create('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $settings);
 				}
 			}
@@ -169,7 +174,7 @@ class Raichu
 		return !$m ? $c : call_user_func_array([$c, $m], $a);
 	}
 
-	public static function url_get($req = '', $params = false) {
+	public static function getUrl($req = '', $params = false) {
 		$rq = self::get()->instance('request');
 		if(strpos($req, '://')) {
 			$return = $req;
@@ -192,6 +197,21 @@ class Raichu
 		}
 		return $return;
 	}
+	public static function api($type, $commands, array $filter = null, array $data = null) {
+		if(!self::get()->api) {
+			throw new Exception('API not configured', 500);
+		}
+		switch($type) {
+			case 'rpc':
+				return (new api\RPCResource(self::get()->api, $commands, $filter, $data))->process();
+			case 'soap':
+				return (new api\RPCResource(self::get()->api, $commands, $filter))->raw();
+			case 'rest':
+			default:
+				return  new api\RESTResource(self::get()->api, $commands, $filter);
+		}
+	}
+
 	/*
 	public static function api($class, $method = null, array $data = array()) {
 		if(!defined('CLASSES') || !is_dir(CLASSES)) {

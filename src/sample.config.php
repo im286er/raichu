@@ -6,6 +6,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'bootstrap.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'autoload.php';
 
 \raichu\Raichu::config([
+	'appname'          => 'demoapp',
 	'database'         => 'mysqli://root@127.0.0.1/raichu',
 	'memcache'         => false,
 	'filecache'        => __DIR__,

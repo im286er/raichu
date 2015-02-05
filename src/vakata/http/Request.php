@@ -158,6 +158,16 @@ class Request implements RequestInterface
 		$data = strpos((string)$this->getHeader('Content-Type'), 'json') !== false ? @json_decode($this->body, true) : $_POST;
 		return $data !== false && $data !== null ? $this->getValue($data, $key, $default, $mode) : null;
 	}
+	public function getParams($key = null, $default = null, $mode = null) {
+		$data = [];
+		if(strpos((string)$this->getHeader('Content-Type'), 'json') !== false) {
+			$data = @json_decode($this->body, true);
+		}
+		else {
+			@parse_str($this->body, $data);
+		}
+		return $data !== false && $data !== null ? $this->getValue($data, $key, $default, $mode) : null;
+	}
 	public function getRequest($key = null, $default = null, $mode = null) {
 		return $this->getValue($_REQUEST, $key, $default, $mode);
 	}
@@ -190,7 +200,7 @@ class Request implements RequestInterface
 
 	public function getResponseFormat($default = 'html') {
 		// parse accept header (uses default instead of 406 header)
-		$acpt = $this->extension ? 'application/' . $this->extension : (raichu::input_header('accept') ?: 'application/' . $default);
+		$acpt = $this->extension ? 'application/' . $this->extension : ($this->getHeader('Accept') ?: 'application/' . $default);
 		$acpt = explode(',', $acpt);
 		foreach($acpt as $k => $v) {
 			$v = array_pad(explode(';', $v, 2), 2, 'q=1');
