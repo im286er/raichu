@@ -119,6 +119,14 @@ class Response implements ResponseInterface
 		}
 		while(ob_get_level() && ob_end_clean()) ;
 
+		// above headers, so that filters can send headers
+		if($this->body !== null && strlen($this->body)) {
+			$type = explode(';', $this->getHeader('Content-Type'))[0];
+			foreach($this->filters as $filter) {
+				$this->body = call_user_func($filter, $this->body, $type);
+			}
+		}
+
 		if(!headers_sent()) {
 			http_response_code($this->code);
 			foreach($this->head as $key => $header) {
@@ -126,10 +134,6 @@ class Response implements ResponseInterface
 			}
 		}
 		if($this->body !== null && strlen($this->body)) {
-			$type = explode(';', $this->getHeader('Content-Type'))[0];
-			foreach($this->filters as $filter) {
-				$this->body = call_user_func($filter, $this->body, $type);
-			}
 			if($this->gzip && !(bool)@ini_get('zlib.output_compression') && extension_loaded('zlib')) {
 				ob_start('ob_gzhandler');
 			}
