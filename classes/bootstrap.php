@@ -40,6 +40,7 @@ set_exception_handler(function ($e) {
 		$line = (int)@$e->getLine() - 1;
 		if($file && $line) {
 			for($i = max($line - 5, 0); $i < max($line - 5, 0) + 11; $i++) {
+				if(!isset($file[$i])) { break; }
 				echo '<div style="padding:0 1em; line-height:2em; '. ($line === $i ? 'background:lightyellow; position:relative; color:#8b0000; font-weight:bold; box-shadow:0 0 2px rgba(0,0,0,0.7)' : 'background:'.($i%2 ? '#ebebeb' : 'white').';') . '">';
 				echo '<strong style="float:left; width:40px;">' . ($i + 1). '. </strong> ' . htmlspecialchars(trim($file[$i],"\r\n")) . "\n";
 				echo '</div>';
@@ -49,9 +50,13 @@ set_exception_handler(function ($e) {
 		echo '<pre style="max-width:960px; margin:1em auto; border:1px solid silver; background:white; border-radius:4px; padding-bottom:1em; overflow:hidden;">';
 		echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:1em;">Trace</strong>';
 		foreach($e->getTrace() as $k => $trace) {
-			echo '<p style="margin:0; padding:0 1em; line-height:2em; '.($k%2 == 1 ? 'background:#ebebeb' : '').'">';
-			echo '<span style="display:inline-block; min-width:500px;"><code style="color:green">'.$trace['file'].'</code>';
-			echo '<code style="color:gray"> : </code>';
+			if($k === 0) {
+				$trace['file'] = @$e->getFile();
+				$trace['line'] = @$e->getLine();
+			}
+			echo '<p style="margin:0; padding:0 1em; line-height:2em; '.($k==0?'background:lightyellow; border-top:1px solid gray; border-bottom:1px solid gray;':'').' '.($k%2 == 1 ? 'background:#ebebeb' : '').'">';
+			echo '<span style="display:inline-block; min-width:500px;"><code style="color:green">'.(isset($trace['file'])?$trace['file']:'').'</code>';
+			echo '<code style="color:gray"> '.(isset($trace['file'])?':':'').' </code>';
 			echo '<code style="color:#8b0000">'.$trace['line'].'</code></span> ';
 			if(isset($trace['class'])) {
 				echo '<code style="color:navy">'.$trace['class'].$trace['type'].$trace['function'].'()</code>';
