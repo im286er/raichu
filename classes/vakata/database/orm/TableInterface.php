@@ -21,6 +21,8 @@ interface TableInterface
 	public function belongsTo($tb, $key = null, $field = null);
 	public function manyToMany($tb, $pivot = null, $field = null);
 
+	public function count($filter = null, $params = null);
+
 	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false);
 	public function create(array $data);
 	public function update(array $data);

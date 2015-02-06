@@ -59,8 +59,10 @@ class RPCResource
 		}
 		$sql = [];
 		$par = [];
+		$col = 0;
 		foreach($this->instance->getColumns() as $column) {
 			if(isset($filter[$column])) {
+				$col ++;
 				if(!is_array($filter[$column])) {
 					$filter[$column] = [$filter[$column]];
 				}
@@ -85,7 +87,13 @@ class RPCResource
 		$sql = !count($sql) ? null : implode(' AND ', $sql);
 		$par = !count($par) ? null : $par;
 
-		return $this->instance->read($sql, $par, $order, $limit, $offst);
+		if(isset($filter[$this->instance->getPrimaryKey()]) && $col === 1 && count($filter[$this->instance->getPrimaryKey()]) == 1) {
+			return $this->instance->read($sql, $par, $order, $limit, $offst, true);
+		}
+		return [
+			'meta' => [ 'filter' => $filter, 'count' => $this->instance->count($sql, $par) ],
+			'data' => $this->instance->read($sql, $par, $order, $limit, $offst)
+		];
 	}
 	public function process() {
 		if($this->operation === 'read' && $this->instance instanceof \vakata\database\orm\TableInterface) {

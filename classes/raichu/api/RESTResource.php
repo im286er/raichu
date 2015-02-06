@@ -5,6 +5,9 @@ class RESTResource
 {
 	protected $namespace = null;
 	protected $instance = null;
+	protected $flt = null;
+	protected $sql = null;
+	protected $par = null;
 
 	// filters (users with limited visibility), special fields (created / updated / user), limited changes (locked fields), permissions
 	// paging - where?
@@ -55,9 +58,9 @@ class RESTResource
 				$primary = $instance instanceof \vakata\database\orm\TableInterface ? 
 					$instance->getPrimaryKey() : 
 					$instance->getTable()->getRelations()[$command]['table']->getPrimaryKey();
-				$params = [ (int)array_shift($commands) ];
-				$filter = ' '.$primary.' = ? ';
-				$arg = [ $filter, $params, null, null, null, true ];
+				$par = [ (int)array_shift($commands) ];
+				$sql = ' '.$primary.' = ? ';
+				$arg = [ $sql, $par, null, null, null, true ];
 			}
 			else if(reset($commands) === false) {
 				$sql = [];
@@ -92,6 +95,9 @@ class RESTResource
 				}
 				$sql = !count($sql) ? null : implode(' AND ', $sql);
 				$par = !count($par) ? null : $par;
+				$this->flt = $filter;
+				$this->sql = $sql;
+				$this->par = $par;
 				$arg = [ $sql, $par, $order, $limit, $offst ];
 			}
 			$instance = call_user_func_array([$instance, $command], $arg);
@@ -134,7 +140,13 @@ class RESTResource
 				}
 			}
 		}
-		return $temp;
+		if($this->instance instanceof \vakata\database\orm\TableRowInterface) {
+			return $temp;
+		}
+		return [
+			'meta' => [ 'filter' => $this->flt, 'count' => $this->instance->cnt() ],
+			'data' => $temp
+		];
 	}
 	public function delete() {
 		if($this->instance instanceof \vakata\database\orm\TableRowInterface) {

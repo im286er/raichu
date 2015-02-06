@@ -12,13 +12,14 @@ class TableRows implements TableRowsInterface, \JsonSerializable
 	protected $rel = [];
 	protected $ext = [];
 	protected $del = 0;
+	protected $cnt = 0;
 
-	public function __construct(ResultInterface $col, TableInterface $tbl) {
+	public function __construct(ResultInterface $col, TableInterface $tbl, $cnt = 0) {
 		$this->col = $col;
 		$this->tbl = $tbl;
+		$this->cnt = $cnt;
 
-		$cnt = count($this->col);
-		$this->ext = $cnt ? array_fill(0, count($this->col), null) : [];
+		$this->ext = count($this->col) ? array_fill(0, count($this->col), null) : [];
 	}
 
 	protected function extend($key, array $data = null) {
@@ -29,6 +30,10 @@ class TableRows implements TableRowsInterface, \JsonSerializable
 			return null;
 		}
 		return $this->ext[$key] = new TableRow($this->tbl, $data);
+	}
+
+	public function cnt() {
+		return $this->cnt;
 	}
 
 	public function getTable() {
