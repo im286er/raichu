@@ -12,7 +12,8 @@ class QueryResult
 	protected $iid = null;
 	protected $var = null;
 
-	public function __construct(driver\DriverInterface $drv, $prp, array $data = null) {
+	public function __construct(driver\DriverInterface $drv, $prp, $data = null) {
+		$data = !is_null($data) && !is_array($data) ? [$data] : $data;
 		$this->drv = $drv;
 		$this->prp = $prp;
 		$this->rsl = $this->drv->execute($this->prp, $data);

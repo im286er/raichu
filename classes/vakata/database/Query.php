@@ -13,7 +13,7 @@ class Query
 		$this->sql = $sql;
 		$this->prp = $this->drv->prepare($sql);
 	}
-	public function execute(array $data = null) {
+	public function execute($data = null) {
 		return new QueryResult($this->drv, $this->prp, $data);
 	}
 }

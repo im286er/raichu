@@ -55,7 +55,7 @@ class DB implements DatabaseInterface
 	 * @param  array   $data Параметри за изпълнението
 	 * @return QueryResult   Резултат от изпълнението на заявката
 	 */
-	public function execute(array $data = null) {
+	public function execute($data = null) {
 		try {
 			return $this->rsl = $this->que->execute($data);
 		} catch (\Exception $e) {
@@ -69,7 +69,7 @@ class DB implements DatabaseInterface
 	 * @param  array   $data  Параметри за изпълнението
 	 * @return QueryResult    Резултат от изпълнението на заявката
 	 */
-	public function query($sql, array $data = null) {
+	public function query($sql, $data = null) {
 		try {
 			$this->prepare($sql);
 			return $this->execute($data);
@@ -89,7 +89,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return ArrayLike         Резултат от заявката, който можем да подадем на foreach
 	 */
-	public function get($sql, array $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
+	public function get($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
 		return (new Query($this->drv, $sql))->execute($data)->result($key, $skip_key, $mode, $opti);
 	}
 	/**
@@ -103,7 +103,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return array             Резултат от изпълнението
 	 */
-	public function all($sql, array $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
+	public function all($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
 		return $this->get($sql, $data, $key, $skip_key, $mode, $opti)->get();
 	}
 	/**
@@ -115,7 +115,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return array         Резултат от изпълнението
 	 */
-	public function one($sql, array $data = null, $mode = 'assoc', $opti = true) {
+	public function one($sql, $data = null, $mode = 'assoc', $opti = true) {
 		return $this->get($sql, $data, null, false, $mode, $opti)->one();
 	}
 	/**
