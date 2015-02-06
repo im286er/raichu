@@ -90,9 +90,10 @@ class RPCResource
 		if(isset($filter[$this->instance->getPrimaryKey()]) && $col === 1 && count($filter[$this->instance->getPrimaryKey()]) == 1) {
 			return $this->instance->read($sql, $par, $order, $limit, $offst, true);
 		}
+		$temp = $this->instance->read($sql, $par, $order, $limit, $offst);
 		return [
-			'meta' => [ 'filter' => $filter, 'count' => $this->instance->count($sql, $par) ],
-			'data' => $this->instance->read($sql, $par, $order, $limit, $offst)
+			'meta' => [ 'filter' => $filter, 'count' => $temp->cnt() ],
+			'data' => $temp->toArray(true)
 		];
 	}
 	public function process() {

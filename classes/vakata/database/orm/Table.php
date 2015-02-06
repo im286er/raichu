@@ -124,12 +124,6 @@ class Table implements TableInterface
 		return $this->db;
 	}
 
-	public function count($filter = null, $params = null) {
-		if(!$filter) {
-			$filter = '1 = 1';
-		}
-		return $this->db->one('SELECT COUNT(*) FROM ' . $this->tb . ' WHERE ' . $filter, $params);
-	}
 	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false) {
 		if(!$filter) {
 			$filter = '1 = 1';
