@@ -35,6 +35,7 @@ class Result implements ResultInterface, \JsonSerializable
 		}
 		$tmp = $this->rslt->row();
 		$row = [];
+
 		switch($this->mode) {
 			case 'num':
 				foreach($tmp as $k => $v) {
@@ -61,8 +62,8 @@ class Result implements ResultInterface, \JsonSerializable
 		if($this->skip) {
 			unset($row[$this->fake]);
 		}
-		if($this->opti && is_array($row) && count($row) === 1) {
-			$row = current($row);
+		if($this->opti && is_array($row) && count($row) <= 1) {
+			$row = count($row) ? current($row) : current($tmp);
 		}
 		return $row;
 	}
