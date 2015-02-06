@@ -69,4 +69,9 @@ class Users extends Table
 		
 		return parent::delete($data);
 	}
+
+	// RPC callable function
+	public function demo() {
+		throw new \Exception('asdf');
+	}
 }
