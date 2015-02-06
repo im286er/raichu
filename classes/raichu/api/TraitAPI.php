@@ -7,7 +7,7 @@ trait TraitAPI
 {
 	protected final function requireUser() {
 		raichu::user()->login(raichu::request()->getAuthorization());
-		if(!raichu::user_is_valid()) {
+		if(!raichu::user()->valid()) {
 			throw new APIException('Invalid user', 401);
 		}
 	}
