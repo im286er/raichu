@@ -1,13 +1,6 @@
 <?php
-require_once('src/config.php');
+require_once('config.php');
 use \raichu\Raichu as raichu;
-
-//raichu::response()->addFilter(function ($body, $mime) {
-//	if(strpos($mime, 'json') !== false && ($temp = @json_decode($body, true))) {
-//		return json_encode($temp, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-//	}
-//	return $body;
-//});
 
 raichu::route()
 	->with('api')
@@ -28,9 +21,7 @@ raichu::route()
 		->add([ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD' ], '/', function ($matches, $req, $res) {
 			throw new Exception('Choose REST, RPC or SOAP', 400);
 		})
-		->with('')
-	->with('api/rest')
-		->add([ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD' ], function ($matches, $req, $res) {
+		->add([ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD' ], 'rest/{**}', function ($matches, $req, $res) {
 			$data = raichu::api('rest', array_slice($req->getUrlSegments(), 2), $req->getQuery());
 			$full = $data->read($req->getQuery('full') !== null);
 			$etag = md5(serialize($full));
@@ -102,9 +93,7 @@ raichu::route()
 					break;
 			}
 		})
-		->with('')
-	->with('api/soap')
-		->add([ 'GET', 'POST' ], function ($matches, $req, $res) {
+		->add([ 'GET', 'POST' ], 'soap/{**}', function ($matches, $req, $res) {
 			$data = raichu::api('soap', array_slice($req->getUrlSegments(), 2));
 			try {
 				$soap = new SoapServer(null, array(
@@ -117,8 +106,7 @@ raichu::route()
 				$soap->fault($ex->getCode(), $ex->getMessage());
 			}
 		})
-	->with('api/rpc')
-		->add([ 'GET', 'POST' ], function ($matches, $req, $res) {
+		->add([ 'GET', 'POST' ], 'rpc/{**}', function ($matches, $req, $res) {
 			$data = raichu::api('rpc', array_slice($req->getUrlSegments(), 2), $req->getQuery(), $req->getParams());
 
 			if($req->isCors()) {
@@ -148,50 +136,4 @@ raichu::route()
 					echo '</body></html>';
 					break;
 			}
-		})
-		->with('')
-	->error(function ($matches, $req, $res, $exception = null) {
-		$code = 404;
-		$mssg = 'В момента не можем да обслужим заявката Ви.';
-		if($exception) {
-			$code = $exception->getCode() >= 200 && $exception->getCode() <= 503 ? $exception->getCode() : 500;
-			$mssg = $exception->getMessage();
-			// $mssg = 'В момента не можем да обслужим заявката Ви.';
-		}
-		$res->removeHeaders();
-		$res->setStatusCode($code);
-		switch($req->getResponseFormat()) {
-			case 'json':
-				$res->setContentType('json');
-				echo json_encode($mssg);
-				break;
-			case 'xml':
-				$res->setContentType('xml');
-				echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n\n";
-				echo '<error><![CDATA['.str_replace(']]>', '', $mssg).']]></error>';
-				break;
-			case 'html':
-				$res->setContentType('html');
-				echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Грешка</title></head><body style="background:#ebebeb;">' . "\n\n";
-				echo '<h1 style="font-size:1.4em; text-align:center; margin:2em 0 0 0; color:#8b0000; text-shadow:1px 1px 0 white;">'.htmlspecialchars($mssg).'</h1>' . "\n\n";
-				echo '</body></html>';
-				break;
-			case 'text':
-			default:
-				$res->setContentType('txt');
-				echo $msg;
-				break;
-		}
-		die();
-
-		//$user = new \vakata\database\orm\Table(raichu::db(), 'users');
-		//$user->hasOne('users_authentication', 'user_id', 'auth');
-		//echo $user->one(3)->auth()->provider;
-		//$tree = new \vakata\database\orm\Table(raichu::db(), 'tree_mixed');
-		//$chld = clone $tree;
-		//$tree->hasMany($chld, 'pid', 'children');
-		//$chld->hasMany(clone $tree, 'pid', 'children');
-		//$temp = $tree->filter("pid = 0")->get();
-		//die();
-	})
-	->run(raichu::request(), raichu::response());
+		});
