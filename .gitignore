@@ -1,5 +1,5 @@
 /src/*.log
-/src/config.php
+/config.php
 *.sublime-*
 /tests
 /phpunit.xml

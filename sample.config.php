@@ -2,8 +2,8 @@
 define('DEBUG',   true);
 define('LOGROOT', __DIR__);
 
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'bootstrap.php';
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'autoload.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'bootstrap.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 \raichu\Raichu::config([
 	'appname'          => 'demoapp',
@@ -14,6 +14,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'autoload.php';
 	'sessionCache'     => false,
 	'session'          => true,
 	'csrf'             => true,
+	'csp'              => false,
 	'uploadsDirectory' => __DIR__,
 	'uploadsDatabase'  => true,
 	'user'             => [

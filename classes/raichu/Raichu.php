@@ -4,9 +4,10 @@ namespace raichu;
 class Raichu
 {
 	private static $instance = null;
-	private $dice = null;
+
+	private $dice  = null;
+	private $conf  = null;
 	private $cache = [];
-	private $api = null;
 
 	private function __construct() {
 		$this->dice = new \Dice\Dice;
@@ -18,13 +19,11 @@ class Raichu
 	public static function config(array $settings = []) {
 		$raichu = self::get();
 
+		$raichu->conf = $settings;
+
 		$shared = new \Dice\Rule;
 		$subs = new \Dice\Rule;
 		$shared->shared = true;
-
-		if(isset($settings['appname'])) {
-			$raichu->api = $settings['appname'];
-		}
 
 		if(isset($settings['database']) && $settings['database']) {
 			$raichu->dice->addRule('vakata\\database\\DB', $shared);
@@ -52,6 +51,10 @@ class Raichu
 		}
 		$raichu->dice->addRule('vakata\\http\\Request', $shared);
 		$raichu->dice->addRule('vakata\\http\\Response', $shared);
+
+		$raichu->dice->addRule('vakata\\route\\Route', $shared);
+		$rt = $raichu->cache['vakata\\route\\Route'] = $raichu->cache['route'] = $raichu->dice->create('vakata\\route\\Route');
+
 		if(isset($settings['uploadsDirectory']) && $settings['uploadsDirectory']) {
 			$raichu->dice->addRule('vakata\\upload\\Upload', $shared);
 			$uploads = new \Dice\Rule;
@@ -112,10 +115,55 @@ class Raichu
 
 		if(isset($settings['csrf']) && $settings['csrf'] && session_status() === PHP_SESSION_ACTIVE) {
 			$rq->checkCSRF();
+			$rs->addFilter(function ($body, $mime) {
+				if(strpos($mime, 'htm') !== false) {
+					if(isset($_SESSION) && is_array($_SESSION) && isset($_SESSION['_csrf_token'])) {
+						$body = preg_replace(
+							'@<form[^>]+method="post"[^>]*>@ui', 
+							"\\0" . '<input type="hidden" style="display:none;" name="_csrf_token" value="'.htmlspecialchars($_SESSION['_csrf_token']).'" />', 
+							$body
+						);
+					}
+				}
+				return $body;
+			});
 		}
-		register_shutdown_function(function () use ($rs) {
+
+		$rs->addFilter(function ($body, $mime) use ($rs) {
+			if(strpos($mime, 'htm') !== false) {
+				$rs->setHeader("X-UA-Compatible", "IE=edge,chrome=1");
+			}
+			if(defined('DEBUG') && DEBUG && strpos($mime, 'json') !== false && ($temp = @json_decode($body, true))) {
+				return json_encode($temp, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+			}
+			return $body;
+		});
+		register_shutdown_function(function () use ($rq, $rs, $rt) {
+			if(!$rt->isEmpty()) {
+				$rt->run($rq, $rs);
+			}
 			$rs->send();
 		});
+
+		$raichu->dice->addRule('vakata\\log\\Log', $shared);
+		$lg = $raichu->cache['vakata\\log\\Log'] = $raichu->cache['log'] = $raichu->dice->create('vakata\\log\\Log');
+
+		if(isset($settings['csp']) && $settings['csp']) {
+			$csp = $rq->getUrlBase() . 'csp-report';
+			$rs->addFilter(function ($body, $mime) use ($rs, $rq, $csp) {
+				if(strpos($mime, 'htm') !== false) {
+					$rs->setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' *.".$rq->getUrlDomain()." ajax.googleapis.com; style-src 'self' 'unsafe-inline' *.".$rq->getUrlDomain()."; img-src *; font-src *; frame-src 'self' facebook.com *.facebook.com *.twitter.com *.google.com; object-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; media-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; report-uri " . $csp);
+				}
+				return $body;
+			});
+			if(trim($rq->getUrl(false), '/') === $csp) {
+				$rs->removeHeaders();
+				$rs->setBody(null);
+				while(ob_get_level()) { ob_end_clean(); }
+				$lg->warning('CSP:' . trim($rq->getBody()));
+				die();
+			}
+		}
 
 		if(isset($settings['user']) && $settings['user']) {
 			$auth = [];
@@ -153,12 +201,8 @@ class Raichu
 
 		$raichu->dice->addRule('vakata\\event\\Event', $shared);
 		$raichu->cache['vakata\\event\\Event'] = $raichu->cache['event'] = $raichu->dice->create('vakata\\event\\Event');
-		$raichu->dice->addRule('vakata\\route\\Route', $shared);
-		$raichu->cache['vakata\\route\\Route'] = $raichu->cache['route'] = $raichu->dice->create('vakata\\route\\Route');
 		$raichu->dice->addRule('vakata\\random\\Random', $shared);
 		$raichu->cache['vakata\\random\\Random'] = $raichu->cache['random'] = $raichu->dice->create('vakata\\random\\Random');
-		$raichu->dice->addRule('vakata\\log\\Log', $shared);
-		$raichu->cache['vakata\\log\\Log'] = $raichu->cache['log'] = $raichu->dice->create('vakata\\log\\Log');
 	}
 	public static function get() {
 		if(!self::$instance) {
@@ -197,18 +241,28 @@ class Raichu
 		}
 		return $return;
 	}
+	public static function getConfig($key) {
+		$cnf = self::get()->conf;
+		$key = explode('.', $key);
+		while($tmp = array_shift($key)) {
+			if(!isset($cnf[$tmp])) { return null; }
+			$cnf = $cnf[$tmp];
+		}
+		return $cnf;
+	}
 	public static function api($type, $commands, array $filter = null, array $data = null) {
-		if(!self::get()->api) {
+		$api = self::getConfig('appname');
+		if(!$api) {
 			throw new Exception('API not configured', 500);
 		}
 		switch($type) {
 			case 'rpc':
-				return (new api\RPCResource(self::get()->api, $commands, $filter, $data))->process();
+				return (new api\RPCResource($api, $commands, $filter, $data))->process();
 			case 'soap':
-				return (new api\RPCResource(self::get()->api, $commands, $filter))->raw();
+				return (new api\RPCResource($api, $commands, $filter))->raw();
 			case 'rest':
 			default:
-				return  new api\RESTResource(self::get()->api, $commands, $filter);
+				return new api\RESTResource($api, $commands, $filter);
 		}
 	}
 
