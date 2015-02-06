@@ -46,7 +46,7 @@ namespace vakata\user\authentication {
 			$username = $data['username'];
 			$password = $data['password'];
 
-			if((int)$this->settings['ip_errors'] && (int)$this->db->one('SELECT COUNT(*) FROM ' . $this->tb . '_log WHERE ip = ? AND created > NOW() - INTERVAL 1 HOUR', array($this->ipAddress())) > (int)$this->settings['ip_errors']) {
+			if((int)$this->settings['ip_errors'] && (int)$this->db->one('SELECT COUNT(*) FROM ' . $this->tb . '_log WHERE ip = ? AND action = \'error\' AND created > NOW() - INTERVAL 1 HOUR', array($this->ipAddress())) > (int)$this->settings['ip_errors']) {
 				throw new UserException('IP адресът е блокиран за един час след ' . (int)$this->settings['ip_errors'] . ' грешни опита.');
 			}
 			$tmp = $this->db->one('SELECT id, username, password, created FROM ' . $this->tb . ' WHERE username = ? ORDER BY created DESC LIMIT 1', array($username));
