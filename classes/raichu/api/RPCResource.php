@@ -88,7 +88,7 @@ class RPCResource
 		return $this->instance->read($sql, $par, $order, $limit, $offst);
 	}
 	public function process() {
-		if($this->operation === 'read') {
+		if($this->operation === 'read' && $this->instance instanceof \vakata\database\orm\TableInterface) {
 			return $this->read();
 		}
 		return call_user_func([$this->instance, $this->operation], $this->data);
