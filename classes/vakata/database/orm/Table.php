@@ -131,7 +131,12 @@ class Table implements TableInterface
 		$temp = new TableRows(
 			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
 			$this,
-			$this->db->one('SELECT COUNT(*) FROM ' . $this->tb . ' WHERE ' . $filter, $params)
+			[
+				'count'  => $this->db->one('SELECT COUNT(*) FROM ' . $this->tb . ' WHERE ' . $filter, $params),
+				'order'  => $order,
+				'limit'  => $limit,
+				'offset' => $offset
+			]
 		);
 		return $is_single ? (isset($temp[0]) ? $temp[0] : null) : $temp;
 	}

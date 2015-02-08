@@ -6,7 +6,7 @@ use vakata\database\DatabaseInterface;
 
 class Users extends Table
 {
-	use \raichu\api\TraitAPI;
+	use \raichu\module\TraitPermission;
 
 	public function __construct(DatabaseInterface $db) {
 		/*
