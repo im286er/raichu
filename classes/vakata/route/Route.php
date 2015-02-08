@@ -164,6 +164,7 @@ class Route
 								$arg[$k] = trim($v,'/');
 							}
 						}
+						while(ob_get_level()) { ob_end_clean(); }
 						return $this->invoke($route, $arg, $req, $res);
 					}
 				}
@@ -173,6 +174,7 @@ class Route
 		catch (\Exception $e) {
 			$res->removeHeaders();
 			$res->setBody(null);
+			while(ob_get_level()) { ob_end_clean(); }
 
 			if(isset($this->err)) {
 				return $this->invoke($this->err, $arg, $req, $res, $e);
