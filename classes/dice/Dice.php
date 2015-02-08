@@ -11,7 +11,14 @@ class Dice {
 	private $instances = [];
 	
 	public function addRule($name, Rule $rule) {
-		$this->rules[ltrim($name, '\\')] = $rule;
+		if(is_array($name)) {
+			foreach($name as $nm) {
+				$this->addRule($nm, $rule);
+			}
+		}
+		else {
+			$this->rules[ltrim($name, '\\')] = $rule;
+		}
 	}
 
 	public function getRule($name) {
