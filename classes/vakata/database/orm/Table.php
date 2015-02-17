@@ -176,6 +176,7 @@ class Table implements TableInterface
 			throw new ORMException('Can not update without primary key');
 		}
 		$this->getDatabase()->query('DELETE FROM ' . $this->tb . ' WHERE id = ?', [$data[$this->getPrimaryKey()]]);
+		return $data[$this->getPrimaryKey()];
 	}
 
 	/*
