@@ -3,13 +3,13 @@ namespace raichu\api;
 
 class SOAP
 {
-	public function __construct(\vakata\route\Route $router, $namespace, $url = '') {
+	public function __construct(\vakata\route\Route $router, $classes, $url = '') {
 		$url = trim($url, '/');
 		$router
 			->with($url)
-			->add([ 'GET', 'POST' ], '{**:resource}', function ($matches, $req, $res) use ($namespace) {
+			->add([ 'GET', 'POST' ], '{**:resource}', function ($matches, $req, $res) use ($classes) {
 				try {
-					$data = $this->instance($namespace, $matches['resource']);
+					$data = $this->instance($classes, $matches['resource']);
 					$soap = new SoapServer(null, array(
 						'uri' => $req->getUrl(false)
 					));
@@ -22,7 +22,7 @@ class SOAP
 			})
 			->with('');
 	}
-	public function instance($namespace, $commands) {
+	public function instance($classes, $commands) {
 		if(!is_array($commands)) {
 			$commands = explode('/', trim($commands, '/'));
 		}
@@ -38,7 +38,27 @@ class SOAP
 			if(!$instance) {
 				throw new APIException('Invalid resource');
 			}
-			$instance = \raichu\Raichu::instance($namespace . '\\' . $instance);
+
+			$class = null;
+			if(is_string($classes)) {
+				$class = $classes . '\\' . $instance;
+			}
+			if(!$class && is_array($classes) && isset($classes[$instance])) {
+				$class = $classes[$instance];
+			}
+			if(!$class && is_array($classes)) {
+				foreach($classes as $candidate) {
+					if(array_reverse(explode('\\', $candidate))[0] === $instance) {
+						$class = $candidate;
+						break;
+					}
+				}
+			}
+			if(!$class) {
+				throw new APIException('Invalid resource');
+			}
+
+			$instance = \raichu\Raichu::instance($class);
 			if(!$instance) {
 				throw new APIException('Invalid resource');
 			}

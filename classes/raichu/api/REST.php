@@ -3,8 +3,9 @@ namespace raichu\api;
 
 class REST
 {
-	public function __construct(\vakata\route\Route $router, $namespace, $url = '') {
+	public function __construct(\vakata\route\Route $router, $classes, $url = '') {
 		$url = trim($url, '/');
+
 		$router
 			->with($url)
 			->options('{**}', function ($matches, $req, $res) {
@@ -21,8 +22,8 @@ class REST
 				$headers[] = 'Authorization';
 				$res->setHeader('Access-Control-Allow-Headers', implode(', ', $headers));
 			})
-			->add([ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD' ], '{**:resource}', function ($matches, $req, $res) use ($namespace) {
-				$data = $this->resource($namespace, $matches['resource'], $req->getQuery());
+			->add([ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD' ], '{**:resource}', function ($matches, $req, $res) use ($classes) {
+				$data = $this->resource($classes, $matches['resource'], $req->getQuery());
 				if($req->isCors()) {
 					$res->setHeader('Access-Control-Allow-Origin', $req->getHeader('Origin'));
 					$headers = [];
@@ -162,7 +163,7 @@ class REST
 			})
 			->with('');
 	}
-	public function resource($namespace, $commands, array $filter = null) {
+	public function resource($classes, $commands, array $filter = null) {
 		if(!is_array($commands)) {
 			$commands = explode('/', trim($commands, '/'));
 		}
@@ -178,7 +179,27 @@ class REST
 			if(!$instance) {
 				throw new APIException('Invalid resource');
 			}
-			$instance = \raichu\Raichu::instance($namespace . '\\' . $instance);
+
+			$class = null;
+			if(is_string($classes)) {
+				$class = $classes . '\\' . $instance;
+			}
+			if(!$class && is_array($classes) && isset($classes[$instance])) {
+				$class = $classes[$instance];
+			}
+			if(!$class && is_array($classes)) {
+				foreach($classes as $candidate) {
+					if(array_reverse(explode('\\', $candidate))[0] === $instance) {
+						$class = $candidate;
+						break;
+					}
+				}
+			}
+			if(!$class) {
+				throw new APIException('Invalid resource');
+			}
+
+			$instance = \raichu\Raichu::instance($class);
 			if(!$instance || !($instance instanceof \vakata\database\orm\TableInterface)) {
 				throw new APIException('Invalid resource');
 			}
