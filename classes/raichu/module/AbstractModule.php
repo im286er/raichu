@@ -12,7 +12,7 @@ abstract class AbstractModule extends Table
 	protected $config  = null;
 	protected $version = null;
 
-	public function __construct(DatabaseInterface $db, array $config = [], Versions $v = null) {
+	public function __construct(DatabaseInterface $db, array $config = []) {
 		$config = array_merge_recursive([
 				'module' => [
 					'name'				=> basename(str_replace('\\', '/', get_class($this))),
@@ -103,7 +103,7 @@ abstract class AbstractModule extends Table
 			$i = null;
 		}
 
-		$this->version = $config['module']['versions'] && $v ? $v : function ($o, $i, $d = null) {};
+		$this->version = $config['module']['versions'] ? \raichu\Raichu::instance('raichu\\module\\Versions') : null;
 
 		parent::__construct($db, $this->config['module']['table'], $this->config['module']['pk'], $r, $i);
 
@@ -171,7 +171,9 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::create($data);
-		$this->version($this, $id, $data);
+		if($this->version) {
+			$this->version($this, $id, $data);
+		}
 		return $id;
 	}
 	public function update(array $data) {
@@ -212,7 +214,9 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::update($data);
-		$this->version($this, $id, $data);
+		if($this->version) {
+			$this->version($this, $id, $data);
+		}
 		return $id;
 	}
 	public function delete(array $data) {
@@ -230,7 +234,9 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::delete($data);
-		$this->version($this, $id, $data);
+		if($this->version) {
+			$this->version($this, $id, $data);
+		}
 		return $id;
 	}
 }
