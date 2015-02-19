@@ -8,18 +8,18 @@ trait TraitPermission
 	protected final function requireUser() {
 		raichu::user()->login(raichu::request()->getAuthorization());
 		if(!raichu::user()->valid()) {
-			throw new APIException('Invalid user', 401);
+			throw new \Exception('Invalid user', 401);
 		}
 	}
 	protected final function requireAdmin() {
 		$this->requireUser();
 		if(!raichu::user()->admin) {
-			throw new APIException('Invalid user', 403);
+			throw new \Exception('Invalid user', 403);
 		}
 	}
 	protected final function requirePermission($permission) {
 		if(!$this->hasPermission($permission)) {
-			throw new APIException('Invalid action', 403);
+			throw new \Exception('Invalid action', 403);
 		}
 	}
 	protected final function hasPermission($permission) {
@@ -30,14 +30,14 @@ trait TraitPermission
 	}
 	protected final function requireLocal() {
 		if(!isset($_SERVER['REMOTE_ADDR']) || !isset($_SERVER['SERVER_ADDR']) || !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', $_SERVER['SERVER_ADDR']])) {
-			throw new APIException('Invalid caller', 403);
+			throw new \Exception('Invalid caller', 403);
 		}
 	}
 	protected final function requireParams($params, $required) {
 		if(!is_array($required)) { $required = [$required]; }
 		foreach($required as $key) {
 			if(!isset($params[$key])) {
-				throw new APIException('Invalid arguments - missing ' . htmlspecialchars($key), 400);
+				throw new \Exception('Invalid arguments - missing ' . htmlspecialchars($key), 400);
 			}
 		}
 	}
