@@ -153,7 +153,7 @@ class RPC
 		$limit = isset($filter['l']) && (int)$filter['l'] ? (int)$filter['l'] : null;
 		$offst = isset($limit) && isset($filter['p']) ? (int)$filter['p'] * $limit : null;
 		if(isset($filter['d']) && isset($order)) {
-			$order .= (int)$filter['d'] ? ' DESC' : 'ASC';
+			$order .= (int)$filter['d'] ? ' DESC' : ' ASC';
 		}
 		$sql = [];
 		$par = [];

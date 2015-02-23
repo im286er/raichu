@@ -129,7 +129,7 @@ class Table implements TableInterface
 			$filter = '1 = 1';
 		}
 		$temp = new TableRows(
-			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
+			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order . ' ' : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
 			$this,
 			[
 				'count'  => $this->db->one('SELECT COUNT(*) FROM ' . $this->tb . ' WHERE ' . $filter, $params),
