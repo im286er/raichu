@@ -239,7 +239,7 @@ class Route
 				case 'text':
 				default:
 					$res->setContentType('txt');
-					echo $msg;
+					echo $e->getMessage();
 					break;
 			}
 		}
