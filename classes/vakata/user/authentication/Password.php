@@ -111,11 +111,12 @@ namespace vakata\user\authentication {
 				$m = $e['username'];
 				$hsh = md5($e['id'] . $m . time() . rand(0,9));
 				if($this->db->query(
-					"INSERT INTO ".$this->tb."_restore (hash, password_id, created, ip, ua) VALUES (?,?,?,?)", 
+					"INSERT INTO ".$this->tb."_restore (hash, password_id, created, ip, ua) VALUES (?,?,?,?,?)", 
 					[$hsh, $e['id'], date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()]
 				)->affected()) {
 					return array('id' => $m, 'token' => $hsh, 'provider' => $this->provider()); //, 'is_mail' => filter_var($m, FILTER_VALIDATE_EMAIL));
 				}
+				throw new UserException('Моля, опитайте отново');
 			}
 			throw new NoRestoreException('Невъзможно възстановяването на парола');
 		}
