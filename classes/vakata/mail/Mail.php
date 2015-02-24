@@ -15,9 +15,9 @@ class Mail
 		if(!is_array($to)) {
 			$to = explode(',', $to);
 		}
-		$to = array_filter(array_map($to, function ($mail) {
+		$to = array_filter(array_map(function ($mail) {
 			return filter_var(trim($mail), FILTER_VALIDATE_EMAIL) ? trim($mail) : null;
-		}));
+		}, $to));
 
 		$this->to = $to;
 		$this->from = $from;
