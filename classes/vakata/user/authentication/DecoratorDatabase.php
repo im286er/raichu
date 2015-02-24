@@ -28,7 +28,7 @@ class DecoratorDatabase implements AuthenticationInterface
 		return $this->auth->clear();
 	}
 	public function restore($data = null) {
-		$hash = $this->auth->restore();
+		$hash = $this->auth->restore($data);
 		$user = $this->getByProviderId($hash['provider'], $hash['id']);
 		return array_merge($user, $hash);
 	}

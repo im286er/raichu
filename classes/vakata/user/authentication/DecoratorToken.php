@@ -33,7 +33,7 @@ class DecoratorToken implements AuthenticationInterface
 		return $this->auth->clear();
 	}
 	public function restore($data = null) {
-		return $this->auth->restore();
+		return $this->auth->restore($data);
 	}
 	protected function verifyToken($challenge) {
 		$token = explode('.', $challenge);

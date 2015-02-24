@@ -89,7 +89,7 @@ class DecoratorSession implements AuthenticationInterface
 		return null;
 	}
 	public function restore($data = null) {
-		return $this->auth->restore();
+		return $this->auth->restore($data);
 	}
 	public function clear() {
 		$this->auth->clear();
