@@ -33,6 +33,7 @@ abstract class AbstractOAuth extends AbstractAuthentication
 					'redirect_uri=' . urlencode($this->callback_url) . '&' . 
 					'state='        . $this->state()
 			);
+			die();
 		}
 		else {
 			if(isset($_GET['error_reason']) || isset($_GET['error']) || !isset($_GET['code'])) {
