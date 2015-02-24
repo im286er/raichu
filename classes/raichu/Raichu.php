@@ -5,6 +5,7 @@ class Raichu
 {
 	private static $dice = null;
 	private static $repl = [];
+	private static $conf = [];
 
 	private function __construct() { }
 
@@ -23,8 +24,20 @@ class Raichu
 		if(!$m && count($a)) { $m = 'get'; }
 		return !$m ? $c : call_user_func_array([$c, $m], $a);
 	}
+	public static function getConfig($key) {
+		$key = explode('.', $key);
+		$tmp = static::$conf;
+		foreach($key as $k) {
+			if(!isset($tmp[$k])) {
+				return null;
+			}
+			$tmp = $tmp[$k];
+		}
+		return $tmp;
+	}
 
 	public static function config(array $settings = []) {
+		static::$conf = $settings;
 		if(!static::$dice) {
 			static::$dice = new \Dice\Dice;
 		}
@@ -126,11 +139,11 @@ class Raichu
 			if(isset($settings['user']['oauth']) && is_array($settings['user']['oauth'])) {
 				foreach($settings['user']['oauth'] as $provider => $args) {
 					$args[] = $rq->getUrlBase() . 'login/' . $provider . '/callback';
-					$auth[] = static::$dice->create('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $settings);
+					$auth[] = static::$dice->create('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $args);
 				}
 			}
 			if(isset($settings['user']['password']) && $settings['user']['password']) {
-				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Password', [$settings['user']['password']]);
+				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Password', is_array($settings['user']['password']) ? $settings['user']['password'] : [$settings['user']['password']]);
 			}
 			if(isset($settings['user']['ldap']) && $settings['user']['ldap']) {
 				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Ldap', [$settings['user']['ldap']]);
