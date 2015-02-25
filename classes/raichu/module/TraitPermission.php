@@ -8,19 +8,25 @@ trait TraitPermission
 	protected final function requireUser() {
 		raichu::user()->login(raichu::request()->getAuthorization());
 		if(!raichu::user()->valid()) {
-			throw new \Exception('Invalid user', 401);
+			throw new \Exception('Невалиден потребител', 401);
 		}
 	}
 	protected final function requireAdmin() {
 		$this->requireUser();
 		if(!raichu::user()->admin) {
-			throw new \Exception('Invalid user', 403);
+			throw new \Exception('Недостатъчно ниво на достъп', 403);
 		}
 	}
 	protected final function requirePermission($permission) {
 		if(!$this->hasPermission($permission)) {
-			throw new \Exception('Invalid action', 403);
+			throw new \Exception('Действието е забранено за потребителя', 403);
 		}
+	}
+	protected final function isUser() {
+		return raichu::user()->valid();
+	}
+	protected final function isAdmin() {
+		return raichu::user()->valid() && raichu::user()->admin;
 	}
 	protected final function hasPermission($permission) {
 		$permissions = @json_decode(raichu::user()->permissions, true);
@@ -30,14 +36,14 @@ trait TraitPermission
 	}
 	protected final function requireLocal() {
 		if(!isset($_SERVER['REMOTE_ADDR']) || !isset($_SERVER['SERVER_ADDR']) || !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', $_SERVER['SERVER_ADDR']])) {
-			throw new \Exception('Invalid caller', 403);
+			throw new \Exception('Невалидно отдалечено извикване', 403);
 		}
 	}
 	protected final function requireParams($params, $required) {
 		if(!is_array($required)) { $required = [$required]; }
 		foreach($required as $key) {
 			if(!isset($params[$key])) {
-				throw new \Exception('Invalid arguments - missing ' . htmlspecialchars($key), 400);
+				throw new \Exception('Липсва параметър - ' . htmlspecialchars($key), 400);
 			}
 		}
 	}
