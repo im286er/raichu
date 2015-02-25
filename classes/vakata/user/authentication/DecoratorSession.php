@@ -79,11 +79,12 @@ class DecoratorSession implements AuthenticationInterface
 				throw new UserException('Моля влезте отново.');
 			}
 			// валиден
+			$_SESSION[$this->settings['key']]['data']['regenerated'] = 0;
+			$_SESSION[$this->settings['key']]['data']['seen'] = $_SESSION[$this->settings['key']]['lastseen'] = time();
 			if($this->settings['regenerate'] && time() - (int)$_SESSION[$this->settings['key']]['lastregenerate'] > $this->settings['regenerate']) {
-				$_SESSION[$this->settings['key']]['lastregenerate'] = time();
+				$_SESSION[$this->settings['key']]['data']['regenerated'] = $_SESSION[$this->settings['key']]['lastregenerate'] = $_SESSION[$this->settings['key']]['data']['seen'];
 				session_regenerate_id(true);
 			}
-			$_SESSION[$this->settings['key']]['data']['seen'] = $_SESSION[$this->settings['key']]['lastseen'] = time();
 			return $_SESSION[$this->settings['key']]['data'];
 		}
 		return null;

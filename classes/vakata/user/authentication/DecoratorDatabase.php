@@ -54,7 +54,7 @@ class DecoratorDatabase implements AuthenticationInterface
 			if((int)$data['disabled']) {
 				throw new UserException('Блокиран потребител');
 			}
-			if(isset($temp['login']) && isset($temp['seen']) && $temp['login'] < $temp['seen'] && isset($data['match_session']) && isset($data['last_session']) && (bool)$data['match_session'] && $data['last_session'] !== session_id()) {
+			if(isset($temp['login']) && isset($temp['seen']) && isset($temp['regenerated']) && $temp['regenerated'] !== $temp['seen'] && $temp['login'] < $temp['seen'] && isset($data['match_session']) && isset($data['last_session']) && (bool)$data['match_session'] && $data['last_session'] !== session_id()) {
 				throw new UserException('Има друг потребител с вашето име в системата.');
 			}
 			// name, mail - normalize from data and update if present
