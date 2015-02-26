@@ -218,6 +218,10 @@ class Raichu
 				die();
 			}
 		}
+		// cors
+		if(isset($settings['cors']) && $settings['cors']) {
+			$rs->enableCors($rq);
+		}
 		// flush routes and response at end
 		register_shutdown_function(function () use ($rq, $rs, $rt) {
 			if(!$rt->isEmpty()) {
