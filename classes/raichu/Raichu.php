@@ -57,8 +57,7 @@ class Raichu
 			'vakata\\user\\User',
 			'vakata\\log\\Log',
 			'vakata\\event\\Event',
-			'vakata\\random\\Random',
-			'raichu\\module\\Versions'
+			'vakata\\random\\Random'
 		], $shared);
 
 		// interface substitutions
@@ -72,12 +71,6 @@ class Raichu
 			new \Dice\Instance('vakata\\upload\\Upload');
 		$substitution->substitutions['vakata\\user\\UserInterface'] = new \Dice\Instance('vakata\\user\\User');
 		static::$dice->addRule('*', $substitution);
-
-		// constructor parameters
-		$versions = new \Dice\Rule;
-		$versions->shared = true;
-		$versions->constructParams = [$settings['versions']];
-		static::$dice->addRule('raichu\\module\\Versions', $versions);
 
 		if(isset($settings['database']) && $settings['database']) {
 			$database = new \Dice\Rule;

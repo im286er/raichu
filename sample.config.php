@@ -7,7 +7,6 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . '
 
 \raichu\Raichu::config([
 	'database' => 'mysqli://root@127.0.0.1/raichu',
-	'versions' => 'versions',
 	'cache'    => 'file://' . __DIR__, // memcache://127.0.0.1
 	'session'  => [
 		'storage'    => 'database', // or 'cache' or 'file'
@@ -33,5 +32,6 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . '
 		'database'    => 'users'
 	],
 	'csp'      => false,
-	'csrf'     => true
+	'csrf'     => true,
+	'cors'     => false // enable CORS globally
 ]);

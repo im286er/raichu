@@ -8,10 +8,11 @@ abstract class AbstractCRUDModule extends Table
 {
 	use TraitPermission;
 
-	protected $name    = null;
-	protected $config  = null;
+	protected $name     = null;
+	protected $config   = null;
+	protected $versions = '';
 
-	public function __construct(DatabaseInterface $db, array $config = []) {
+	public function __construct(DatabaseInterface $db, array $config = [], $versions = 'versions') {
 		$config = array_merge_recursive([
 				'module' => [
 					'name'				=> basename(str_replace('\\', '/', get_class($this))),
@@ -74,6 +75,7 @@ abstract class AbstractCRUDModule extends Table
 			], $config);
 		$this->name   = $config['module']['name'];
 		$this->config = $config;
+		$this->versions = $versions;
 		
 		if($this->config['module']['requireUser']) {
 			$this->requireUser();
@@ -111,10 +113,10 @@ abstract class AbstractCRUDModule extends Table
 		if(!$this->config['module']['versions']) {
 			return false;
 		}
-		$v = (int)$this->db->one('SELECT MAX(version) FROM versions WHERE table_nm = ? AND table_pk = ?', [$this->config['module']['table'], $id]);
+		$v = (int)$this->db->one('SELECT MAX(version) FROM '.$this->versions.' WHERE table_nm = ? AND table_pk = ?', [$this->config['module']['table'], $id]);
 		$o = $this->db->one('SELECT * FROM '.$this->config['module']['table'].' WHERE '.$this->config['module']['pk'].' = ?', [$id]);
 		return $this->db->query(
-				'INSERT INTO versions (table_nm, table_pk, version, data, object) VALUES(?,?,?,?,?)', 
+				'INSERT INTO '.$this->versions.' (table_nm, table_pk, version, data, object) VALUES(?,?,?,?,?)', 
 				[$this->config['module']['table'], $id, ++$v, json_encode($data), json_encode($o)]
 			)->affected() > 0;
 	}
