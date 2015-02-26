@@ -1,7 +1,5 @@
 <?php
-namespace raichu\module;
-
-use raichu\Raichu as raichu;
+namespace raichu;
 
 trait TraitPermission
 {
@@ -18,7 +16,7 @@ trait TraitPermission
 		}
 	}
 	protected final function requirePermission($permission) {
-		if(!$this->hasPermission($permission)) {
+		if($this->requireUser() && !$this->hasPermission($permission)) {
 			throw new \Exception('Действието е забранено за потребителя', 403);
 		}
 	}

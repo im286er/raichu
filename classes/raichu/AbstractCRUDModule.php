@@ -1,16 +1,15 @@
 <?php
-namespace raichu\module;
+namespace raichu;
 
 use vakata\database\orm\Table;
 use vakata\database\DatabaseInterface;
 
-abstract class AbstractModule extends Table
+abstract class AbstractCRUDModule extends Table
 {
 	use TraitPermission;
 
 	protected $name    = null;
 	protected $config  = null;
-	protected $version = null;
 
 	public function __construct(DatabaseInterface $db, array $config = []) {
 		$config = array_merge_recursive([
@@ -102,14 +101,22 @@ abstract class AbstractModule extends Table
 		if(!count($i)) {
 			$i = null;
 		}
-
-		$this->version = $config['module']['versions'] ? \raichu\Raichu::instance('raichu\\module\\Versions') : null;
-
 		parent::__construct($db, $this->config['module']['table'], $this->config['module']['pk'], $r, $i);
-
 		foreach($this->config['relations'] as $field => $options) {
 			$this->{$options['rtype']}(strpos($options['table'], '\\') ? raichu::instance($options['table']) : $options['table'], $options['field'], $field);
 		}
+	}
+
+	protected function version($id, $data = null) {
+		if(!$this->config['module']['versions']) {
+			return false;
+		}
+		$v = (int)$this->db->one('SELECT MAX(version) FROM versions WHERE table_nm = ? AND table_pk = ?', [$this->config['module']['table'], $id]);
+		$o = $this->db->one('SELECT * FROM '.$this->config['module']['table'].' WHERE '.$this->config['module']['pk'].' = ?', [$id]);
+		return $this->db->query(
+				'INSERT INTO versions (table_nm, table_pk, version, data, object) VALUES(?,?,?,?,?)', 
+				[$this->config['module']['table'], $id, ++$v, json_encode($data), json_encode($o)]
+			)->affected() > 0;
 	}
 
 	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false) {
@@ -171,9 +178,7 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::create($data);
-		if($this->version) {
-			$this->version($this, $id, $data);
-		}
+		$this->version($id, $data);
 		return $id;
 	}
 	public function update(array $data) {
@@ -214,9 +219,7 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::update($data);
-		if($this->version) {
-			$this->version($this, $id, $data);
-		}
+		$this->version($id, $data);
 		return $id;
 	}
 	public function delete(array $data) {
@@ -234,9 +237,7 @@ abstract class AbstractModule extends Table
 		}
 
 		$id = parent::delete($data);
-		if($this->version) {
-			$this->version($this, $id, $data);
-		}
+		$this->version($id, $data);
 		return $id;
 	}
 }
