@@ -93,10 +93,15 @@ class Route
 			$url = null;
 		}
 
-		if(!$url) {
-			$url = '{**}';
+		if(!$url && $this->prefix) {
+			$url = $this->prefix;
 		}
-		$url     = $this->prefix . $url;
+		else {
+			if(!$url) {
+				$url = '{**}';
+			}
+			$url = $this->prefix . $url;
+		}
 
 		if(!$method) {
 			$method = ['GET','POST'];
@@ -152,7 +157,7 @@ class Route
 
 	public function run(\vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
 		$this->isRun = true;
-		$url = '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/';
+		$url = str_replace('//', '/', '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/');
 		$arg = explode('/',trim($url, '/'));
 		try {
 			if(isset($this->all)) {
