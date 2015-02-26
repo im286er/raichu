@@ -110,6 +110,26 @@ class Response implements ResponseInterface
 		$this->setHeader('Location', $url);
 	}
 
+	public function enableCors(RequestInterface $req, array $methods = null) {
+		if(!$req->isCors()) {
+			return;
+		}
+		if(!$methods) {
+			$methods = [ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE' ];
+		}
+		$this->setHeader('Access-Control-Allow-Origin', $req->getHeader('Origin'));
+		$headers = [];
+		if($req->hasHeader('Access-Control-Request-Headers')) {
+			$headers = array_map('trim', array_filter(explode(',', $req->getHeader('Access-Control-Request-Headers'))));
+		}
+		$headers[] = 'Authorization';
+		$this->setHeader('Access-Control-Allow-Headers', implode(', ', $headers));
+		if($req->getMethod() === 'OPTIONS') {
+			$this->setHeader('Access-Control-Max-Age', '3600');
+			$this->setHeader('Access-Control-Allow-Methods', implode(', ', $methods));
+		}
+	}
+
 	public function send() {
 		if(!$this->hasHeader('Content-Type')) {
 			$this->setContentType('html');

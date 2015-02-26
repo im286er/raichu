@@ -132,6 +132,9 @@ class Request implements RequestInterface
 	public function getUrlExtension($default = null) {
 		return $this->extension === '' ? $default : $this->extension;
 	}
+	public function getUrlRoot() {
+		return $this->webroot;
+	}
 	public function getUrlBase() {
 		return $this->server.$this->webroot;
 	}
