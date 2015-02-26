@@ -76,6 +76,56 @@ class TableRow implements TableRowInterface, \JsonSerializable
 				$args[1] = [ (int)$args[0] ];
 				$args[0] = ' '.$inst['class']->getPrimaryKey().' = ? ';
 			}
+
+			if(is_array($args[0])) {
+				$filter = array_merge([
+					'l' => null,
+					'p' => 0,
+					'o' => null,
+					'd' => 0,
+					'q' => ''
+				], $args[0]);
+				if(!isset($args[2]) && isset($filter['o']) && in_array($filter['o'], $inst['class']->getColumns())) {
+					$args[2] = $filter['o'];
+				}
+				if(!isset($args[3]) && isset($filter['l']) && (int)$filter['l']) {
+					$args[3] = (int)$filter['l'];
+				}
+				if(!isset($args[4]) && isset($args[3]) && isset($filter['p'])) {
+					$args[4] = (int)$filter['p'] * $args[3];
+				}
+				if(isset($filter['d']) && isset($args[2]) && strpos($args[2], 'ASC') === false && strpos($args[2], 'DESC') === false) {
+					$args[2] .= (int)$filter['d'] ? ' DESC' : ' ASC';
+				}
+				$sql = [];
+				$par = [];
+				foreach($inst['class']->getColumns() as $column) {
+					if(isset($filter[$column])) {
+						if(!is_array($filter[$column])) {
+							$filter[$column] = [$filter[$column]];
+						}
+						if(isset($filter[$column]['beg']) && isset($filter[$column]['end'])) {
+							$sql[] = ' ' . $column . ' BETWEEN ? AND ? ';
+							$par[] = $filter[$column]['beg'];
+							$par[] = $filter[$column]['end'];
+							continue;
+						}
+						if(count($filter[$column])) {
+							$sql[] = ' ' . $column . ' IN ('.implode(',', array_fill(0, count($filter[$column]), '?')).') ';
+							$par = array_merge($par, $filter[$column]);
+							continue;
+						}
+					}
+				}
+				$indexed = $inst['class']->getIndexed();
+				if(isset($filter['q']) && strlen($filter['q']) && count($indexed)) {
+					$sql[] = ' MATCH ('.implode(',', $indexed).') AGAINST (?) ';
+					$par[] = $filter['q'];
+				}
+				$args[0] = !count($sql) ? null : implode(' AND ', $sql);
+				$args[1] = !count($par) ? null : $par;
+			}
+
 			if(!isset($args[0])) { $args[0] = ' 1 = 1 '; }
 			if(!isset($args[1])) { $args[1] = []; }
 			if(!isset($args[2])) { $args[2] = null; }

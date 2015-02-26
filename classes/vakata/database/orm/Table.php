@@ -125,6 +125,54 @@ class Table implements TableInterface
 	}
 
 	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false) {
+		if(is_array($filter)) {
+			$filter = array_merge([
+				'l' => null,
+				'p' => 0,
+				'o' => null,
+				'd' => 0,
+				'q' => ''
+			], $filter);
+			if(!isset($order) && isset($filter['o']) && in_array($filter['o'], $this->getColumns())) {
+				$order = $filter['o'];
+			}
+			if(!isset($limit) && isset($filter['l']) && (int)$filter['l']) {
+				$limit = (int)$filter['l'];
+			}
+			if(!isset($offset) && isset($limit) && isset($filter['p'])) {
+				$offset = (int)$filter['p'] * $limit;
+			}
+			if(isset($filter['d']) && isset($order) && strpos($order, 'ASC') === false && strpos($order, 'DESC') === false) {
+				$order .= (int)$filter['d'] ? ' DESC' : ' ASC';
+			}
+			$sql = [];
+			$par = [];
+			foreach($this->getColumns() as $column) {
+				if(isset($filter[$column])) {
+					if(!is_array($filter[$column])) {
+						$filter[$column] = [$filter[$column]];
+					}
+					if(isset($filter[$column]['beg']) && isset($filter[$column]['end'])) {
+						$sql[] = ' ' . $column . ' BETWEEN ? AND ? ';
+						$par[] = $filter[$column]['beg'];
+						$par[] = $filter[$column]['end'];
+						continue;
+					}
+					if(count($filter[$column])) {
+						$sql[] = ' ' . $column . ' IN ('.implode(',', array_fill(0, count($filter[$column]), '?')).') ';
+						$par = array_merge($par, $filter[$column]);
+						continue;
+					}
+				}
+			}
+			$indexed = $this->getIndexed();
+			if(isset($filter['q']) && strlen($filter['q']) && count($indexed)) {
+				$sql[] = ' MATCH ('.implode(',', $indexed).') AGAINST (?) ';
+				$par[] = $filter['q'];
+			}
+			$filter = !count($sql) ? null : implode(' AND ', $sql);
+			$params = !count($par) ? null : $par;
+		}
 		if(!$filter) {
 			$filter = '1 = 1';
 		}
