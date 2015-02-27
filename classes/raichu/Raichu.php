@@ -220,9 +220,7 @@ class Raichu
 		}
 		// flush routes and response at end
 		register_shutdown_function(function () use ($rq, $rs, $rt) {
-			if(!$rt->isEmpty()) {
-				$rt->run($rq, $rs);
-			}
+			$rt->run($rq, $rs);
 			$rs->send();
 		});
 	}
