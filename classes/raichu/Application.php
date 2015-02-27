@@ -5,16 +5,22 @@ use \vakata\view\View;
 
 class Application
 {
-	use TraitPermission;
+	use TraitPermission {
+		isUser as public;
+		isAdmin as public;
+		hasPermission as public;
+	}
 
 	protected $slug = '';
 	protected $name = null;
 	protected $clss = null;
 	protected $view = null;
+	protected $conf = null;
 	
-	public function __construct($name, $clss, $slug = '', $view = null) {
+	public function __construct($name, $clss, $slug = '', $view = null, array $conf = []) {
 		$this->name = $name;
 		$this->clss = $clss;
+		$this->conf = $conf;
 		$this->slug = strlen(trim($slug, '/')) ? trim($slug, '/') . '/' : '';
 		if($view) {
 			$this->view = realpath($view);
@@ -33,13 +39,13 @@ class Application
 
 	public function url($req = '', array $params = null) {
 		if(strpos($req, '//') == false) {
-			if($req[0] !== '/') {
+			if(!isset($req[0]) || $req[0] !== '/') {
 				$req = raichu::request()->getUrlRoot() . $this->slug . $req;
 			}
 			$req = array_map('urlencode',explode('/',trim($req,'/')));
 			foreach($req as $k => $v) {
 				if($v == '..' && $k) { unset($req[$k - 1]); }
-				if($v == '.' || $v == '..') { unset($req[$k]); }
+				else if($v == '.' || $v == '..') { unset($req[$k]); }
 			}
 			$req = raichu::request()->getUrlServer() . '/' . implode('/', $req);
 		}
@@ -48,6 +54,18 @@ class Application
 			$req = $req . '?' . $params;
 		}
 		return $req;
+	}
+
+	public function config($key) {
+		$key = explode('.', $key);
+		$tmp = $this->conf;
+		foreach($key as $k) {
+			if(!isset($tmp[$k])) {
+				return null;
+			}
+			$tmp = $tmp[$k];
+		}
+		return $tmp;
 	}
 
 	protected function normalizeView($view) {
@@ -64,19 +82,14 @@ class Application
 		$view = $this->normalizeView($view);
 		return is_file($view) && is_readable($view);
 	}
-	public function render($view, $data = null, $decorate = false) {
+	public function render($view, array $data = []) {
 		if(!$this->viewExists($view)) {
 			throw new \Exception('View not readable');
 		}
 		$view = $this->normalizeView($view);
-		if($decorate) {
-			if(!$data) { $data = []; }
-			$data['req']  = raichu::request();
-			$data['res']  = raichu::response();
-			$data['app']  = $this;
-			$data['user'] = raichu::user();
-		}
-		return View::get($view, $data);
+		$inst = new View($view, $data);
+		$inst->add('app', $this);
+		return $inst->render();
 	}
 
 	public function instance($instance) {
@@ -102,33 +115,12 @@ class Application
 	}
 	public function invoke($class, $method = 'index', $data = null) {
 		$temp = $this->instance($class);
+		$method = explode('.', $method)[0];
 		if(!is_callable([$temp, $method])) {
 			throw new \Exception('Method not found', 404);
 		}
 		$content = $temp->{$method}($data);
 		return $content;
-	}
-
-	public function process($class, $method = 'index', $frmt = 'html', $data = null) {
-		$data = $this->invoke($class, $method, $data);
-		$class = basename(str_replace('\\', '/', $class));
-		$view = $class.'.'.$method.'.'.$frmt.'.php';
-		if($this->viewExists($view)) {
-			return $this->render($view, $data, true);
-		}
-		$view = $class.'.'.$method.'.php';
-		if($this->viewExists($view)) {
-			return $this->render($view, $data, true);
-		}
-		$view = $method.'.'.$frmt.'.php';
-		if($this->viewExists($view)) {
-			return $this->render($view, $data, true);
-		}
-		$view = $method.'.php';
-		if($this->viewExists($view)) {
-			return $this->render($view, $data, true);
-		}
-		throw new \Exception('No view found');
 	}
 
 	public function toXML($data) {

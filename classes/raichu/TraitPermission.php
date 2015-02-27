@@ -28,9 +28,10 @@ trait TraitPermission
 	}
 	protected final function hasPermission($permission) {
 		$permissions = @json_decode(raichu::user()->permissions, true);
+
 		return	$permissions && 
 				is_array($permissions) && 
-				in_array($permission, $permissions);
+				in_array(strtolower($permission), array_map('strtolower', $permissions));
 	}
 	protected final function requireLocal() {
 		if(!isset($_SERVER['REMOTE_ADDR']) || !isset($_SERVER['SERVER_ADDR']) || !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', $_SERVER['SERVER_ADDR']])) {

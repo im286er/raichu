@@ -13,7 +13,7 @@ abstract class AbstractCRUDModule extends Table
 	protected $versions = '';
 
 	public function __construct(DatabaseInterface $db, array $config = [], $versions = 'versions') {
-		$config = array_merge_recursive([
+		$config = array_replace_recursive([
 				'module' => [
 					'name'				=> basename(str_replace('\\', '/', get_class($this))),
 					'table'				=> basename(str_replace('\\', '/', get_class($this))),
