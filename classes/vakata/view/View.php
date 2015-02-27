@@ -4,11 +4,14 @@ namespace vakata\view;
 class View
 {
 	protected $file = null;
-	protected $data = null;
+	protected $data = [];
 
-	public function __construct($file, $data = null) {
+	public function __construct($file, array $data = []) {
 		$this->file = $file;
 		$this->data = $data;
+	}
+	public function add($name, $value) {
+		$this->data[$name] = $value;
 	}
 	public function render() {
 		extract($this->data);

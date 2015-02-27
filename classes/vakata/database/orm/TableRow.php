@@ -77,7 +77,7 @@ class TableRow implements TableRowInterface, \JsonSerializable
 				$args[0] = ' '.$inst['class']->getPrimaryKey().' = ? ';
 			}
 
-			if(is_array($args[0])) {
+			if(isset($args[0]) && is_array($args[0])) {
 				$filter = array_merge([
 					'l' => null,
 					'p' => 0,
