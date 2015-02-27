@@ -159,6 +159,8 @@ class Response implements ResponseInterface
 			}
 			echo $this->body;
 		}
+		$this->body = null;
+		$this->head = [];
 		@ob_end_flush();
 	}
 }

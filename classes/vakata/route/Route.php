@@ -6,7 +6,7 @@ class Route
 	protected $routes = [];
 	protected $all = null;
 	protected $err = null;
-	protected $isRun = false;
+	protected $ran = false;
 	protected $prefix = '';
 
 	protected function compile($url) {
@@ -151,12 +151,18 @@ class Route
 		$this->err = $handler;
 		return $this;
 	}
+	public function isRun() {
+		return $this->ran;
+	}
 	public function isEmpty() {
-		return $this->isRun || ($this->all === null && $this->err === null && count($this->routes) === 0);
+		return $this->all === null && $this->err === null && count($this->routes) === 0;
 	}
 
 	public function run(\vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
-		$this->isRun = true;
+		if($this->isRun() || $this->isEmpty()) {
+			return;
+		}
+		$this->ran = true;
 		$url = str_replace('//', '/', '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/');
 		$arg = explode('/',trim($url, '/'));
 		try {
