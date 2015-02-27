@@ -25,6 +25,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . '
 			'linkedin'  => [ ]
 		],
 		'ldap'        => false, // domain here
+		'ldapdeco'    => false, // [ 'domain', 'user', 'pass' ],
 		'token'       => 'secret_token_key_here',
 		'password'    => 'users_password',
 		'certificate' => true,

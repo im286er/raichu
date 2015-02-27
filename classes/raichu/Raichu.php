@@ -154,6 +154,9 @@ class Raichu
 			if(isset($settings['user']['database']) && $settings['user']['database']) {
 				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorDatabase', [$m, $settings['user']['database']]);
 			}
+			if(isset($settings['user']['ldapdeco']) && is_array($settings['user']['ldapdeco'])) {
+				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorLDAP', array_merge([$m], $settings['user']['ldapdeco']));
+			}
 		}
 		$user = new \Dice\Rule;
 		$user->shared = true;
