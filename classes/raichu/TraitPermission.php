@@ -4,20 +4,23 @@ namespace raichu;
 trait TraitPermission
 {
 	protected final function requireUser() {
-		raichu::user()->login(raichu::request()->getAuthorization());
 		if(!raichu::user()->valid()) {
-			throw new \Exception('Невалиден потребител', 401);
+			raichu::user()->login(raichu::request()->getAuthorization());
+			if(!raichu::user()->valid()) {
+				throw new PermissionException('Невалиден потребител', 401);
+			}
 		}
 	}
 	protected final function requireAdmin() {
 		$this->requireUser();
 		if(!raichu::user()->admin) {
-			throw new \Exception('Недостатъчно ниво на достъп', 403);
+			throw new PermissionException('Недостатъчно ниво на достъп', 403);
 		}
 	}
 	protected final function requirePermission($permission) {
-		if($this->requireUser() && !$this->hasPermission($permission)) {
-			throw new \Exception('Действието е забранено за потребителя', 403);
+		$this->requireUser();
+		if(!$this->hasPermission($permission)) {
+			throw new PermissionException('Действието е забранено за потребителя', 403);
 		}
 	}
 	protected final function isUser() {
@@ -35,15 +38,20 @@ trait TraitPermission
 	}
 	protected final function requireLocal() {
 		if(!isset($_SERVER['REMOTE_ADDR']) || !isset($_SERVER['SERVER_ADDR']) || !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', $_SERVER['SERVER_ADDR']])) {
-			throw new \Exception('Невалидно отдалечено извикване', 403);
+			throw new PermissionException('Невалидно отдалечено извикване', 403);
 		}
 	}
 	protected final function requireParams($params, $required) {
 		if(!is_array($required)) { $required = [$required]; }
 		foreach($required as $key) {
 			if(!isset($params[$key])) {
-				throw new \Exception('Липсва параметър - ' . htmlspecialchars($key), 400);
+				throw new ParamsException('Липсва параметър - ' . htmlspecialchars($key), 400);
 			}
+		}
+	}
+	protected final function requirePost() {
+		if(!isset($_SERVER['REQUEST_METHOD']) || !in_array($_SERVER['REQUEST_METHOD'], ['POST','PUT','PATCH','DELETE'])) {
+			throw new PostRequiredException('Некоректно обръщение', 405);
 		}
 	}
 }
