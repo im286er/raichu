@@ -12,7 +12,7 @@ class Filecache implements CacheInterface
 		$this->namespace = $default_namespace;
 	}
 
-	protected function addNamespace($key, $partition = false) {
+	protected function addNamespace($key, $partition = null) {
 		if(!$partition) { $partition = $this->namespace; }
 		$partition = basename($partition);
 		if(!is_dir($this->dir . DIRECTORY_SEPARATOR . $partition)) {
@@ -23,7 +23,7 @@ class Filecache implements CacheInterface
 		return $this->dir . DIRECTORY_SEPARATOR . $partition . DIRECTORY_SEPARATOR . $key;
 	}
 
-	public function clear($partition = false) {
+	public function clear($partition = null) {
 		if(!$partition) { $partition = $this->namespace; }
 		$partition = basename($partition);
 		if(is_dir($this->dir . DIRECTORY_SEPARATOR . $partition)) {
@@ -36,7 +36,7 @@ class Filecache implements CacheInterface
 		}
 	}
 
-	public function prepare($key, $partition = false) {
+	public function prepare($key, $partition = null) {
 		if(!$partition) { $partition = $this->namespace; }
 		$key = $this->addNamespace($key, $partition);
 		if(!@file_put_contents($key, 'wait')) {
@@ -44,7 +44,7 @@ class Filecache implements CacheInterface
 		}
 	}
 
-	public function set($key, $value, $partition = false, $expires = 14400) {
+	public function set($key, $value, $partition = null, $expires = 14400) {
 		if(!$partition) { $partition = $this->namespace; }
 		$key = $this->addNamespace($key, $partition);
 		if(is_string($expires)) { $expires = (int)strtotime($expires) - time(); }
@@ -56,7 +56,7 @@ class Filecache implements CacheInterface
 		return $value;
 	}
 
-	public function get($key, $partition = false, $meta_only = false) {
+	public function get($key, $partition = null, $meta_only = false) {
 		if(!$partition) { $partition = $this->namespace; }
 		$key = $this->addNamespace($key, $partition);
 
@@ -89,7 +89,7 @@ class Filecache implements CacheInterface
 		return $value['data'];
 	}
 
-	public function delete($key, $partition = false) {
+	public function delete($key, $partition = null) {
 		if(!$partition) { $partition = $this->namespace; }
 		$key = $this->addNamespace($key, $partition);
 		if(!@unlink($key)) {
@@ -97,7 +97,7 @@ class Filecache implements CacheInterface
 		}
 	}
 
-	public function getSet($key, callable $value = null, $partition = false, $time = 14400) {
+	public function getSet($key, callable $value = null, $partition = null, $time = 14400) {
 		try {
 			return $this->get($key, $partition);
 		} catch(CacheException $e) {

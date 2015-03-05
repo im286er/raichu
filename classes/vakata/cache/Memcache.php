@@ -30,7 +30,7 @@ class Memcache implements CacheInterface
 		return $this->connected;
 	}
 
-	protected function addNamespace($key, $partition = false) {
+	protected function addNamespace($key, $partition = null) {
 		if(!$this->connected) { throw new CacheException('Cache not connected'); }
 		if(!$partition) { $partition = $this->namespace; }
 
@@ -44,19 +44,19 @@ class Memcache implements CacheInterface
 		return $partition.'_'.$tmp.'_'.$key;
 	}
 
-	public function clear($partition = false) {
+	public function clear($partition = null) {
 		if(!$this->connected) { throw new CacheException('Cache not connected'); }
 		if(!$partition) { $partition = $this->namespace; }
 		$this->memcache->increment($partition);
 	}
 
-	public function prepare($key, $partition = false) {
+	public function prepare($key, $partition = null) {
 		if(!$partition) { $partition = $this->namespace; }
 		$key = $this->addNamespace($key, $partition);
 		$this->memcache->set($key . '_meta', 'wait', MEMCACHE_COMPRESSED, time() + 10);
 	}
 
-	public function set($key, $value, $partition = false, $expires = 14400) {
+	public function set($key, $value, $partition = null, $expires = 14400) {
 		if(!$this->connected) { throw new CacheException('Cache not connected'); }
 		if(!$partition) { $partition = $this->namespace; }
 		if(is_string($expires)) { $expires = (int)strtotime($expires) - time(); }
@@ -79,7 +79,7 @@ class Memcache implements CacheInterface
 		return $orig_value;
 	}
 
-	public function get($key, $partition = false, $meta_only = false) {
+	public function get($key, $partition = null, $meta_only = false) {
 		if(!$this->connected) {
 			throw new CacheException('Cache not connected');
 		}
@@ -120,7 +120,7 @@ class Memcache implements CacheInterface
 		return $value;
 	}
 
-	public function delete($key, $partition = false) {
+	public function delete($key, $partition = null) {
 		if(!$this->connected) {
 			throw new CacheException('Cache not connected');
 		}
@@ -133,7 +133,7 @@ class Memcache implements CacheInterface
 		}
 	}
 
-	public function getSet($key, callable $value = null, $partition = false, $time = 14400) {
+	public function getSet($key, callable $value = null, $partition = null, $time = 14400) {
 		try {
 			return $this->get($key, $partition);
 		} catch(CacheException $e) {
