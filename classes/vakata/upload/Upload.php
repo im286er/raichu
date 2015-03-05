@@ -9,7 +9,7 @@ class Upload implements UploadInterface
 	public function __construct($dir) {
 		$this->dir = $dir;
 	}
-	public function upload($needle, $is_chunk = false) {
+	public function upload($needle, $chunk = 0) {
 		if(!isset($_FILES) || !is_array($_FILES) || !isset($_FILES[$needle])) {
 			throw new UploadException('Uploaded file not found');
 		}
@@ -28,27 +28,21 @@ class Upload implements UploadInterface
 
 		$bnm = $_FILES[$needle]['name'] === 'blob' && isset($_POST) && isset($_POST["name"]) ? $_POST["name"] : $_FILES[$needle]['name'];
 		$bnm = basename($bnm);
-		$cnt = 0;
 		$fnm = substr(str_replace('/','=',trim(base64_encode(basename($bnm)),"=")), 0, 250); // ntfs / fat32 / exfat max filename length is 255
-		if($is_chunk !== false) {
-			$fnm .= '_' . $is_chunk;
+		$cnt = 0;
+		do {
 			$new = $dr . DIRECTORY_SEPARATOR . $fnm . '_' . $cnt;
-			if(file_exists($new)) {
-				move_uploaded_file($_FILES[$needle]['tmp_name'], $new . '_chunk');
-				file_put_contents($new, file_get_contents($new . '_chunk'), FILE_APPEND);
-				unlink($new . '_chunk');
+		} while(file_exists($new) && ++$cnt < 1000000);
+		if($chunk) {
+			if(!$cnt) {
+				throw new UploadException('Could not merge chunk', 500);
 			}
-			else {
-				if(!move_uploaded_file($_FILES[$needle]['tmp_name'], $new)) {
-					throw new UploadException('Could not move uploaded file', 404);
-				}
-				@chmod($new, 0644);
-			}
+			$new = $dr . DIRECTORY_SEPARATOR . $fnm . '_' . ($cnt - 1);
+			move_uploaded_file($_FILES[$needle]['tmp_name'], $new . '_chunk');
+			file_put_contents($new, file_get_contents($new . '_chunk'), FILE_APPEND);
+			unlink($new . '_chunk');
 		}
 		else {
-			do {
-				$new = $dr . DIRECTORY_SEPARATOR . $fnm . '_' . $cnt;
-			} while(file_exists($new) && ++$cnt < 1000000);
 			if(!move_uploaded_file($_FILES[$needle]['tmp_name'], $new)) {
 				throw new UploadException('Could not move uploaded file', 404);
 			}

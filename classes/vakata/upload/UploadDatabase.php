@@ -2,18 +2,19 @@
 namespace vakata\upload;
 
 use vakata\file\FileDatabase;
+use vakata\database\DatabaseInterface;
 
 class UploadDatabase extends Upload
 {
 	protected $db = null;
 	protected $tb = null;
-	public function __construct($dir, \vakata\database\DatabaseInterface $db, $tb = 'uploads') {
+	public function __construct($dir, DatabaseInterface $db, $tb = 'uploads') {
 		parent::__construct($dir);
 		$this->db = $db;
 		$this->tb = $tb;
 	}
-	public function upload($needle, $is_chunk = false) {
-		$file = parent::upload($needle, $is_chunk);
+	public function upload($needle, $chunk = 0) {
+		$file = parent::upload($needle, $chunk);
 		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array($file->location));
 		try {
 			if($id) {
