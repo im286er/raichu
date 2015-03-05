@@ -93,12 +93,25 @@ class Raichu
 			$uploads->constructParams = [$settings['uploads']['directory']];
 			static::$dice->addRule('vakata\\upload\\Upload', $uploads);
 			static::$repl['upload'] = 'vakata\\upload\\Upload';
+
+			$file = new \Dice\Rule;
+			$file->constructParams = [$settings['uploads']['directory']];
+			static::$dice->addRule('vakata\\file\\FileUpload', $file);
+			static::$repl['file'] = 'vakata\\file\\FileUpload';
+
 			if(isset($settings['uploads']['database']) && $settings['uploads']['database']) {
 				$uploads_database = new \Dice\Rule;
 				$uploads_database->shared = true;
 				$uploads_database->constructParams = [$settings['uploads']['directory'], $settings['uploads']['database']];
+				$uploads_database->substitutions['vakata\\database\\DatabaseInterface'] = new \Dice\Instance('vakata\\database\\DB');
 				static::$dice->addRule('vakata\\upload\\UploadDatabase', $uploads_database);
 				static::$repl['upload'] = 'vakata\\upload\\UploadDatabase';
+
+				$file_database = new \Dice\Rule;
+				$file_database->constructParams = [$settings['uploads']['database']];
+				$file_database->substitutions['vakata\\database\\DatabaseInterface'] = new \Dice\Instance('vakata\\database\\DB');
+				static::$dice->addRule('vakata\\file\\FileDatabase', $file_database);
+				static::$repl['file'] = 'vakata\\file\\FileDatabase';
 			}
 		}
 
