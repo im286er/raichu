@@ -8,13 +8,14 @@ class Route
 	protected $err = null;
 	protected $ran = false;
 	protected $prefix = '';
+	protected $preprocessors = [];
 
-	protected function compile($url) {
+	protected function compile($url, $full = true) {
 		$url = array_filter(explode('/',trim($url, '/')), function ($v) { return $v !== ''; });
 		if(!count($url)) {
 			return '(^/+$)ui';
 		}
-		$url = '(^/' . implode('', array_map([$this, 'compileSegment'], $url)) . '$)';
+		$url = '(^/' . implode('', array_map([$this, 'compileSegment'], $url)) . ($full ? '$' : '') .')';
 		if(@preg_match($url, '') === false) {
 			throw new RouteException('Could not compile route regex');
 		}
@@ -77,9 +78,16 @@ class Route
 		return call_user_func($handler, $matches, $req, $res, $e);
 	}
 
-	public function with($prefix = '') {
+	public function with($prefix = '', callable $handler = null) {
 		$prefix = trim($prefix, '/');
 		$this->prefix = $prefix . (strlen($prefix) ? '/' : '');
+		if(isset($handler)) {
+			$prefix = $this->compile($prefix, false);
+			if(!isset($this->preprocessors[$prefix])) {
+				$this->preprocessors[$prefix] = [];
+			}
+			$this->preprocessors[$prefix][] = $handler;
+		}
 		return $this;
 	}
 	public function add($method, $url = null, $handler = null) {
@@ -164,8 +172,24 @@ class Route
 		}
 		$this->ran = true;
 		$url = str_replace('//', '/', '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/');
-		$arg = explode('/',trim($url, '/'));
+		$matches = [];
 		try {
+			foreach($this->preprocessors as $regex => $proc) {
+				if(preg_match($regex, $url, $matches)) {
+					$arg = explode('/',trim($url, '/'));
+					foreach($matches as $k => $v) {
+						if(!is_int($k)) {
+							$arg[$k] = trim($v,'/');
+						}
+					}
+					foreach($proc as $h) {
+						if($this->invoke($h, $arg, $req, $res) === false) {
+							return false;
+						}
+					}
+				}
+			}
+			$arg = explode('/',trim($url, '/'));
 			if(isset($this->all)) {
 				return $this->invoke($this->all, $arg, $req, $res);
 			}
@@ -186,7 +210,7 @@ class Route
 		catch (\Exception $e) {
 			$res->removeHeaders();
 			$res->setBody(null);
-			while(ob_get_level()) { ob_end_clean(); }
+			// while(ob_get_level()) { ob_end_clean(); }
 
 			if(isset($this->err)) {
 				return $this->invoke($this->err, $arg, $req, $res, $e);
