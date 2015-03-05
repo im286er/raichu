@@ -176,17 +176,17 @@ class Table implements TableInterface
 		if(!$filter) {
 			$filter = '1 = 1';
 		}
+		if(is_int($filter)) {
+			$params = $filter;
+			$filter = $this->pk . ' = ?';
+			$is_single = true;
+		}
 		$temp = new TableRows(
 			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order . ' ' : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
-			$this,
-			[
-				'count'  => $this->db->one('SELECT COUNT(*) FROM ' . $this->tb . ' WHERE ' . $filter, $params),
-				'order'  => $order,
-				'limit'  => $limit,
-				'offset' => $offset
-			]
+			$this
 		);
-		return $is_single ? (isset($temp[0]) ? $temp[0] : null) : $temp;
+		$temp = $is_single ? (isset($temp[0]) ? $temp[0] : null) : $temp;
+		return $temp;
 	}
 
 	public function create(array $data) {

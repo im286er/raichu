@@ -145,7 +145,7 @@ class TableRow implements TableRowInterface, \JsonSerializable
 			}
 			else {
 				if($this->{$lkey}) {
-					$this->cche[$ckey] = $inst['class']->read($inst['foreign_key'] . ' = ? AND ('.$args[0].') ', array_merge([$this->{$lkey}], $args[1]), $args[2], $args[3], $args[4]);
+					$this->cche[$ckey] = $inst['class']->read($inst['foreign_key'] . ' = ? AND ('.$args[0].') ', array_merge([$this->{$lkey}], $args[1]), $args[2], $args[3], $args[4], false);
 				}
 				else {
 					$this->cche[$ckey] = $inst['class']->read('1 = 0');

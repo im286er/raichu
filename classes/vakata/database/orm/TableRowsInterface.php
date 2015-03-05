@@ -6,5 +6,4 @@ interface TableRowsInterface extends \Iterator, \ArrayAccess, \Countable
 	public function getTable();
 	public function toArray($full = true);
 	public function save();
-	public function meta();
 }
