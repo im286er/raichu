@@ -12,13 +12,11 @@ class Application
 	}
 
 	protected $slug = '';
-	protected $name = null;
 	protected $clss = null;
 	protected $view = null;
 	protected $conf = null;
 	
-	public function __construct($name, $clss, $slug = '', $view = null, array $conf = []) {
-		$this->name = $name;
+	public function __construct($clss, $slug = '', $view = null, array $conf = []) {
 		$this->clss = $clss;
 		$this->conf = $conf;
 		$this->slug = strlen(trim($slug, '/')) ? trim($slug, '/') . '/' : '';
@@ -30,9 +28,6 @@ class Application
 		}
 	}
 
-	public function name() {
-		return $this->name;
-	}
 	public function slug() {
 		return trim($this->slug, '/');
 	}
