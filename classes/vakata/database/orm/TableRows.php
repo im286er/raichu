@@ -6,7 +6,6 @@ use vakata\database\DatabaseException;
 
 class TableRows implements TableRowsInterface, \JsonSerializable
 {
-	protected $db  = null;
 	protected $col = null;
 	protected $tbl = null;
 	protected $rel = [];
