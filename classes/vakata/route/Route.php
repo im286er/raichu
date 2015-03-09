@@ -74,8 +74,8 @@ class Route
 		);
 		return $url;
 	}
-	protected function invoke(callable $handler, array $matches = null, \vakata\http\RequestInterface $req = null, \vakata\http\ResponseInterface $res = null, \Exception $e = null) {
-		return call_user_func($handler, $matches, $req, $res, $e);
+	protected function invoke(callable $handler, array $matches = null, \vakata\http\RequestInterface $req = null, \vakata\http\ResponseInterface $res = null, \vakata\http\UrlInterface $url = null, \Exception $e = null) {
+		return call_user_func($handler, $matches, $req, $res, $url, $e);
 	}
 
 	public function with($prefix = '', callable $handler = null) {
@@ -166,42 +166,42 @@ class Route
 		return $this->all === null && $this->err === null && count($this->routes) === 0;
 	}
 
-	public function run(\vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
+	public function run(\vakata\http\UrlInterface $url, \vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
 		if($this->isRun() || $this->isEmpty()) {
 			return;
 		}
 		$this->ran = true;
-		$url = str_replace('//', '/', '/'.trim(str_replace($req->getUrlBase(), '', $req->getUrl(false)), '/').'/');
+		$request = str_replace('//', '/', '/'.trim($url->request(false), '/').'/');
 		$matches = [];
 		try {
 			foreach($this->preprocessors as $regex => $proc) {
-				if(preg_match($regex, $url, $matches)) {
-					$arg = explode('/',trim($url, '/'));
+				if(preg_match($regex, $request, $matches)) {
+					$arg = explode('/',trim($request, '/'));
 					foreach($matches as $k => $v) {
 						if(!is_int($k)) {
 							$arg[$k] = trim($v,'/');
 						}
 					}
 					foreach($proc as $h) {
-						if($this->invoke($h, $arg, $req, $res) === false) {
+						if($this->invoke($h, $arg, $req, $res, $url) === false) {
 							return false;
 						}
 					}
 				}
 			}
-			$arg = explode('/',trim($url, '/'));
+			$arg = explode('/',trim($request, '/'));
 			if(isset($this->all)) {
-				return $this->invoke($this->all, $arg, $req, $res);
+				return $this->invoke($this->all, $arg, $req, $res, $url);
 			}
 			if(isset($this->routes[$req->getMethod()])) {
 				foreach($this->routes[$req->getMethod()] as $regex => $route) {
-					if(preg_match($regex, $url, $matches)) {
+					if(preg_match($regex, $request, $matches)) {
 						foreach($matches as $k => $v) {
 							if(!is_int($k)) {
 								$arg[$k] = trim($v,'/');
 							}
 						}
-						return $this->invoke($route, $arg, $req, $res);
+						return $this->invoke($route, $arg, $req, $res, $url);
 					}
 				}
 			}
@@ -213,7 +213,7 @@ class Route
 			// while(ob_get_level()) { ob_end_clean(); }
 
 			if(isset($this->err)) {
-				return $this->invoke($this->err, $arg, $req, $res, $e);
+				return $this->invoke($this->err, $arg, $req, $res, $url, $e);
 			}
 
 			@error_log('PHP Exception:' . ((int)$e->getCode() ? ' ' . $e->getCode() . ' -' : '') . ' ' . $e->getMessage() . ' in '.$e->getFile().' on line '.$e->getLine());
