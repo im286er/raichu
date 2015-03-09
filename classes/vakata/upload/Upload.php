@@ -31,13 +31,13 @@ class Upload implements UploadInterface
 		$fnm = substr(str_replace('/','=',trim(base64_encode(basename($bnm)),"=")), 0, 250); // ntfs / fat32 / exfat max filename length is 255
 		$cnt = 0;
 		do {
-			$new = $dr . DIRECTORY_SEPARATOR . $fnm . '_' . $cnt;
+			$new = $this->dir . DIRECTORY_SEPARATOR . $fnm . '_' . $cnt;
 		} while(file_exists($new) && ++$cnt < 1000000);
 		if($chunk) {
 			if(!$cnt) {
 				throw new UploadException('Could not merge chunk', 500);
 			}
-			$new = $dr . DIRECTORY_SEPARATOR . $fnm . '_' . ($cnt - 1);
+			$new = $this->dir . DIRECTORY_SEPARATOR . $fnm . '_' . ($cnt - 1);
 			move_uploaded_file($_FILES[$needle]['tmp_name'], $new . '_chunk');
 			file_put_contents($new, file_get_contents($new . '_chunk'), FILE_APPEND);
 			unlink($new . '_chunk');
@@ -48,7 +48,7 @@ class Upload implements UploadInterface
 			}
 			@chmod($new, 0644);
 		}
-		return new FileUpload($new);
+		return new FileUpload(basename($new), $this->dir);
 	}
 	public function hasFiles() { 
 		return (isset($_FILES) && is_array($_FILES) && count($_FILES));

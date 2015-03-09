@@ -34,7 +34,7 @@ class UploadDatabase extends Upload
 					array(
 						$file->name,
 						$file->location,
-						$file->extension,
+						substr($file->name, strrpos($file->name, ".") + 1),
 						$file->size,
 						date('Y-m-d H:i:s', $file->modified),
 						$file->hash
@@ -46,6 +46,6 @@ class UploadDatabase extends Upload
 		catch (\Exception $e) {
 			throw new UploadException('Could not store uploaded file in database', 404);
 		}
-		return new FileDatabase($id);
+		return new FileDatabase($id, $this->db, $this->tb);
 	}
 }
