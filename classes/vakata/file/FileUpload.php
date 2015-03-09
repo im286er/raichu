@@ -8,7 +8,7 @@ class FileUpload extends FileDisk
 		if(!$path || !is_file($path) || !is_readable($path)) {
 			throw new FileException('File not found', 404);
 		}
-		parent::construct($path);
+		parent::__construct($path);
 		$this->data['name'] = base64_decode(str_replace('=','/', @current(explode('_',$this->data['name']))));
 	}
 }
