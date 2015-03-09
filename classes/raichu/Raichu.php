@@ -18,11 +18,8 @@ class Raichu
 		}
 		return static::$dice->create($c, $args);
 	}
-	public static function __callStatic($m, $a) {
-		list($c, $m) = array_pad(explode('_', $m, 2), 2, null);
-		$c = static::instance($c);
-		if(!$m && count($a)) { $m = 'get'; }
-		return !$m ? $c : call_user_func_array([$c, $m], $a);
+	public static function __callStatic($c, array $args = []) {
+		return static::instance($c, $args);
 	}
 	public static function getConfig($key) {
 		$key = explode('.', $key);
@@ -51,6 +48,7 @@ class Raichu
 			'vakata\\cache\\Filecache',
 			'vakata\\http\\Request',
 			'vakata\\http\\Response',
+			'vakata\\http\\Url',
 			'vakata\\route\\Route',
 			'vakata\\upload\\Upload',
 			'vakata\\upload\\UploadDatabase',
@@ -135,6 +133,7 @@ class Raichu
 
 		$lg = static::$dice->create('vakata\\log\\Log');
 		$rt = static::$dice->create('vakata\\route\\Route');
+		$ur = static::$dice->create('vakata\\http\\Url');
 		$rq = static::$dice->create('vakata\\http\\Request');
 		$rs = static::$dice->create('vakata\\http\\Response');
 
@@ -144,7 +143,7 @@ class Raichu
 			$auth = [];
 			if(isset($settings['user']['oauth']) && is_array($settings['user']['oauth'])) {
 				foreach($settings['user']['oauth'] as $provider => $args) {
-					$args[] = $rq->getUrlBase() . 'login/' . $provider . '/callback';
+					$args[] = $ur->base() . 'login/' . $provider . '/callback';
 					$auth[] = static::$dice->create('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $args);
 				}
 			}
@@ -178,6 +177,7 @@ class Raichu
 		static::$repl['user'] = 'vakata\\user\\User';
 
 		static::$repl['route'] = 'vakata\\route\\Route';
+		static::$repl['url'] = 'vakata\\http\\Url';
 		static::$repl['request'] = 'vakata\\http\\Request';
 		static::$repl['response'] = 'vakata\\http\\Response';
 		static::$repl['log'] = 'vakata\\log\\Log';
@@ -212,14 +212,14 @@ class Raichu
 		}
 		// csp
 		if(isset($settings['csp']) && $settings['csp']) {
-			$csp = $rq->getUrlBase() . 'csp-report';
+			$csp = $ur->base() . 'csp-report';
 			$rs->addFilter(function ($body, $mime) use ($rs, $rq, $csp) {
 				if(strpos($mime, 'htm') !== false) {
-					$rs->setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' *.".$rq->getUrlDomain()." ajax.googleapis.com; style-src 'self' 'unsafe-inline' *.".$rq->getUrlDomain()."; img-src *; font-src *; frame-src 'self' facebook.com *.facebook.com *.twitter.com *.google.com; object-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; media-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; report-uri " . $csp);
+					$rs->setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' *.".$ur->domain()." ajax.googleapis.com; style-src 'self' 'unsafe-inline' *.".$ur->domain()."; img-src *; font-src *; frame-src 'self' facebook.com *.facebook.com *.twitter.com *.google.com; object-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; media-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; report-uri " . $csp);
 				}
 				return $body;
 			});
-			if(trim($rq->getUrl(false), '/') === $csp) {
+			if(trim($ur->current(false), '/') === $csp) {
 				$rs->removeHeaders();
 				$rs->setBody(null);
 				while(ob_get_level()) { ob_end_clean(); }
@@ -232,8 +232,8 @@ class Raichu
 			$rs->enableCors($rq);
 		}
 		// flush routes and response at end
-		register_shutdown_function(function () use ($rq, $rs, $rt) {
-			$rt->run($rq, $rs);
+		register_shutdown_function(function () use ($ur, $rq, $rs, $rt) {
+			$rt->run($ur, $rq, $rs);
 			$rs->send();
 		});
 	}
