@@ -9,14 +9,7 @@ class Request implements RequestInterface
 	protected $body = null;
 	protected $head = [];
 	protected $meth = 'GET';
-
-	protected $approot		= false;
-	protected $webroot		= false;
-	protected $request		= false;
-	protected $server		= false;
-	protected $segments		= false;
-	protected $extension	= false;
-	protected $domain		= false;
+	protected $extn	= '';
 
 	public function __construct() {
 		$this->http = @trim(array_pop(explode('/', isset($_SERVER["SERVER_PROTOCOL"]) ? $_SERVER["SERVER_PROTOCOL"] : 'HTTP/1.1')));
@@ -35,15 +28,8 @@ class Request implements RequestInterface
 		foreach($headers as $key => $value) {
 			$this->head[$this->cleanHeaderName($key)] = $value;
 		}
-
-		$this->approot		= defined('APPROOT') ? APPROOT : getcwd();
-		$this->webroot		= preg_replace('@/+@','/','/'.str_replace('\\',"/",str_replace(str_replace(array('\\','/'), DIRECTORY_SEPARATOR, trim($_SERVER['DOCUMENT_ROOT'],'/\\')), '', $this->approot)).'/');
-		$this->request		= htmlentities(trim(preg_replace(array('(^'.preg_quote($this->webroot).')ui','(\?'.preg_quote($_SERVER['QUERY_STRING']).'$)ui'),'',$_SERVER['REQUEST_URI']),'/'));
-		$this->server		= 'http' . ( !empty($_SERVER['HTTPS']) ? 's' : '' ) . '://' . htmlentities($_SERVER['SERVER_NAME']);
-		$this->segments		= array_filter(explode('/', $this->request), function ($var) { return $var !== ''; });
-		$this->extension	= strpos($this->request,'.') ? substr($this->request, strrpos($this->request, '.') + 1) : '';
-		$this->domain		= trim(preg_replace('@^www\.@', '', htmlentities($_SERVER['SERVER_NAME'])),'/');
-		if(!preg_match('@^[a-z0-9]{2,4}$@i', $this->extension)) { $this->extension = ''; }
+		$temp = [];
+		$this->extn = preg_match('(\.([a-z0-9]{2,4})$)i', $_SERVER['REQUEST_URI'], $temp) ? $temp[1] : '';
 	}
 	protected function cleanHeaderName($name) {
 		if(strncmp($name, 'HTTP_', 5) === 0) {
@@ -117,37 +103,6 @@ class Request implements RequestInterface
 		return $this->meth;
 	}
 
-	public function getUrl($withQuery = true) {
-		return $this->server.$this->webroot.$this->request.( $withQuery && isset($_SERVER['QUERY_STRING']) && strlen($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : '' );
-	}
-	public function getUrlSegments() {
-		return $this->segments;
-	}
-	public function getUrlSegment($i, $stripExtension = false) {
-		$i = (int)$i;
-		if($i < 0) { $i = count($this->segments) + $i; }
-		$seg = isset($this->segments[$i]) ? urldecode($this->segments[$i]) : null;
-		return $seg === null || !$stripExtension || !strlen($this->extension) ? $seg : preg_replace('@\.'.preg_quote($this->extension).'$@ui', '', $seg);
-	}
-	public function getUrlExtension($default = null) {
-		return $this->extension === '' ? $default : $this->extension;
-	}
-	public function getUrlRoot() {
-		return $this->webroot;
-	}
-	public function getUrlBase() {
-		return $this->server.$this->webroot;
-	}
-	public function getUrlRequest($ext = true) {
-		return $ext || !strlen($this->extension) ? $this->request : preg_replace('@\.'.preg_quote($this->extension).'$@ui','',$this->request);
-	}
-	public function getUrlServer() {
-		return $this->server;
-	}
-	public function getUrlDomain() {
-		return $this->domain;
-	}
-
 	public function getServer($key = null, $default = null, $mode = null) {
 		return $this->getValue($_SERVER, $key, $default, $mode);
 	}
@@ -203,7 +158,7 @@ class Request implements RequestInterface
 
 	public function getResponseFormat($default = 'html') {
 		// parse accept header (uses default instead of 406 header)
-		$acpt = $this->extension ? 'application/' . $this->extension : ($this->getHeader('Accept') ?: 'application/' . $default);
+		$acpt = $this->extn ? 'application/' . $this->extn : ($this->getHeader('Accept') ?: 'application/' . $default);
 		$acpt = explode(',', $acpt);
 		foreach($acpt as $k => $v) {
 			$v = array_pad(explode(';', $v, 2), 2, 'q=1');
