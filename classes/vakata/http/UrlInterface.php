@@ -12,4 +12,5 @@ interface UrlInterface
 	public function base();
 	public function server();
 	public function domain();
+	public function get($req = '', array $params = null);
 }
