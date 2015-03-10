@@ -24,7 +24,7 @@ class DB implements DatabaseInterface
 		}
 		if($drv instanceof Settings) {
 			try {
-				$tmp = '\\vakata\\database\\driver\\' . $drv->type;
+				$tmp = '\\vakata\\database\\driver\\' . ucfirst($drv->type);
 				$drv = new $tmp($drv);
 			} catch (\Exception $e) {
 				throw new DatabaseException('Could not create database driver - ' . $e);
