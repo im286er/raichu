@@ -1,8 +1,6 @@
 <?php
-namespace vakata\io\upload;
+namespace vakata\upload;
 
-use vakata\io\IOException;
-
-class UploadException extends IOException
+class UploadException extends \Exception
 {
 }

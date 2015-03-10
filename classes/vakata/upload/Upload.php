@@ -51,7 +51,15 @@ class Upload implements UploadInterface
 		return new FileUpload(basename($new), $this->dir);
 	}
 	public function hasFiles() { 
-		return (isset($_FILES) && is_array($_FILES) && count($_FILES));
+		if(!isset($_FILES) || !is_array($_FILES) || !count($_FILES)) {
+			return false;
+		}
+		foreach($_FILES as $k => $v) {
+			if(is_uploaded_file($v['tmp_name'])) {
+				return true;
+			}
+		}
+		return false;
 	}
 	public function maxSize() {
 		$size = array(ini_get('upload_max_filesize'), ini_get('post_max_size'));
