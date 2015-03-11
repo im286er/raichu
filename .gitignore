@@ -1,3 +1,6 @@
 /src/*.log
 /config.php
 *.sublime-*
+*/admin/*
+logs/*
+uploads/*

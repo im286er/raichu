@@ -3,6 +3,8 @@ namespace raichu;
 
 use vakata\database\orm\Table;
 use vakata\database\DatabaseInterface;
+use raichu\permission\PermissionsInterface;
+use raichu\permission\TraitPermission;
 
 class CRUDModule extends Table implements PermissionsInterface
 {
@@ -176,6 +178,9 @@ class CRUDModule extends Table implements PermissionsInterface
 						$w[] = $field;
 						$data[$field] = \raichu\Raichu::user()->id;
 				}
+			}
+			if(is_array($data[$field]) || is_object($data[$field])) {
+				$data[$field] = json_encode($data[$field]);
 			}
 		}
 		foreach($data as $k => $v) {
