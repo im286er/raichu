@@ -3,7 +3,6 @@ define('DEBUG',   true);
 define('LOGROOT', __DIR__);
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'bootstrap.php';
-require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'autoload.php';
 
 \raichu\Raichu::config([
 	'database' => 'mysqli://root@127.0.0.1/raichu',
@@ -30,9 +29,14 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . '
 		'password'    => 'users_password',
 		'certificate' => true,
 		'session'     => true,
+		'permissions' => 'permissions',
+		'groups'      => 'users_groups',
 		'database'    => 'users'
 	],
 	'csp'      => false,
 	'csrf'     => true,
-	'cors'     => false // enable CORS globally
+	'cors'     => false, // enable CORS globally
+	// shortcuts for creating instances
+	'classmap' => [
+	]
 ]);
