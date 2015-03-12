@@ -24,7 +24,7 @@ class UploadDatabase extends Upload
 						$file->size,
 						date('Y-m-d H:i:s', $file->modified),
 						$file->hash,
-						$file->id
+						$id
 					)
 				);
 			}
