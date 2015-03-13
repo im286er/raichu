@@ -18,9 +18,15 @@ class View
 	}
 	public function render() {
 		extract($this->data);
-		ob_start();
-		include $this->file;
-		return ob_get_clean();
+		try {
+			ob_start();
+			include $this->file;
+			return ob_get_clean();
+		}
+		catch(\Exception $e) {
+			ob_get_clean();
+			throw $e;
+		}
 	}
 
 	public static function get($file, $data = null) {

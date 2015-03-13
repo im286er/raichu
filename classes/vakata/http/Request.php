@@ -172,7 +172,7 @@ class Request implements RequestInterface
 			if($a[1] < $b[1]) { return 1; }
 			return $b[2] > $b[1] ? -1 : 1;
 		});
-		return $acpt[0][0];
+		return $acpt[0][0] == '*' ? $default : $acpt[0][0];
 	}
 	public function getAuthorization() {
 		if(isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
