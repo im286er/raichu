@@ -92,6 +92,14 @@ class CRUDModule extends Table implements PermissionsInterface
 		$r = [];
 		$i = [];
 		foreach($this->config['fields'] as $field => $data) {
+			$this->config['fields'][$field] = $data = array_merge([
+				'read'             => true,
+				'write'            => true,
+				'index'            => false,
+				'special'          => false,
+				'check_user_read'  => false,
+				'check_user_write' => false
+			], $data);
 			if($data['read'] && (!$data['check_user_read'] || $this->hasPermission($this->name.'.read.'.$field))) {
 				$r[] = $field;
 			}
@@ -111,6 +119,14 @@ class CRUDModule extends Table implements PermissionsInterface
 		parent::__construct($db, $this->config['module']['table'], $this->config['module']['pk'], $r, $i);
 		foreach($this->config['relations'] as $field => $options) {
 			$this->{$options['rtype']}(strpos($options['table'], '\\') ? raichu::instance($options['table']) : $options['table'], $options['field'], $field);
+		}
+		foreach($this->config['operations'] as $op => $conf) {
+			$this->config['operations'][$op] = array_merge([
+				'disabled'          => false,
+				'requireUser'       => false,
+				'requireAdmin'      => false,
+				'requirePermission' => false
+			], $conf);
 		}
 	}
 
