@@ -7,6 +7,7 @@ use vakata\user\UserInterface;
 class User implements UserInterface
 {
 	protected $user = null;
+	protected $meta = [];
 
 	public function __construct(UserInterface $user) {
 		$this->user = $user;
@@ -19,11 +20,19 @@ class User implements UserInterface
 		return $this->user->get($key);
 	}
 	public function __get($key) {
-		return $this->get($key);
+		$temp = $this->get($key);
+		if($temp === null && is_array($this->meta) && isset($this->meta[$key])) {
+			return $this->meta[$key];
+		}
+		return $temp;
 	}
 
 	public function login($data = null) {
-		return $this->user->login($data);
+		$res = $this->user->login($data);
+		if($res && $this->user->meta !== null) {
+			$this->meta = @json_decode($this->user->meta, true);
+		}
+		return $res;
 	}
 	public function logout() {
 		return $this->user->logout();
