@@ -9,7 +9,10 @@ class Raichu
 
 	private function __construct() { }
 
-	public static function instance($c, array $args = []) {
+	public static function instance($c, array $args = [], $named = false) {
+		if($named && !isset(static::$conf['classmap'][strtolower($c)])) {
+			throw new \Exception('Class not found', 404);
+		}
 		if(!static::$dice) {
 			static::$dice = new \Dice\Dice;
 		}
@@ -28,6 +31,7 @@ class Raichu
 	public static function __callStatic($c, array $args = []) {
 		return static::instance($c, $args);
 	}
+
 	public static function getConfig($key) {
 		$key = explode('.', $key);
 		$tmp = static::$conf;
@@ -258,100 +262,6 @@ class Raichu
 			$rt->run($ur, $rq, $rs);
 			$rs->send();
 		});
-	}
-
-	public static function plupload($settings = array(), $populate = array(), $pics = false, $no_script = false, $setting = []) {
-		$settings = array_merge(
-			array(
-				//'prefix'			=> md5(date('U').microtime().rand(0,99)),
-				'prefix'			=> random::string(),
-				'name'				=> 'file',
-				'max_file_size'		=> (file::upload_max_size() - 1024 * 8),
-				'max_total_size'	=> false,
-				'file_limit'		=> false,
-				'disabled'			=> false
-			), $settings);
-		$settings['max_file_size'] = min($settings['max_file_size'],(file::upload_max_size() - 1024 * 8));
-		if($settings['file_limit'] != 1) { $settings['name'] .= '[]'; }
-		$str  = '';
-		$str .= '<div '.($no_script ? ' data-config=\'["'.str_replace('/api/','/',url::get('file')).'", "'.$settings['prefix'].'", { "image" : '.($pics ? 'true' : 'false').', "plupload" : "true", "prefix" : "'.$settings['prefix'].'", "_csrf_token" : "'.$_SESSION['_csrf_token'].'" }, "'.$settings['name'].'", '.(int)$settings['max_file_size'].', '.(int)$settings['file_limit'].', '.(int)$settings['max_total_size'].', "'.str_replace('/api/','/',url::get('file')).'", '.($settings['disabled'] ? 'true' : 'false').', '.json_encode($setting, JSON_HEX_TAG | JSON_HEX_APOS).']\' '  : '').' id="plup_'.$settings['prefix'].'" class="plup_container '.($settings['disabled'] ? 'plup_disabled' : '').' cf '.($settings['file_limit'] == 1 ? 'plup_single' : '' ).' '.($pics && (int)$settings['file_limit'] !== 1 ? 'plup_pics' : '').'">';
-		$str .= '  <input type="file" name="'.$settings['name'].'" '.($settings['disabled'] ? ' disabled="disabled" ' : '').' />';
-		$str .= '  <a id="plup_pick_'.$settings['prefix'].'" href="#"  class="plup_pick btn btn-warning" style="display:none;"><i class="glyphicon glyphicon-upload icon-white"></i> '.($settings['file_limit'] == 1 ? 'Избери файл' : 'Избери файлове' ).'</a>';
-		if((int)$settings['file_limit'] !== 1 && is_array($populate) && count($populate)) {
-			$str .= '  <a href="'.raichu::url_get('file/zip/').'" class="plup_pick btn btn-info download-all" title="изтегли всички"><i class="glyphicon glyphicon-download icon-white"></i></a>';
-		}
-
-		$extra = [];
-		$extra[] = 'качен на ';
-		$str .= '  <div style="display:none;" class="new_file_info">';
-		if($setting && count($setting) && !$settings['disabled']) {
-			$str .= '<a class="plup_setting" href="#"><i class="glyphicon glyphicon-cog"></i></a>';
-		}
-		$str .= '<small style="color:silver; float:right; margin-right:10px;">'.implode('&nbsp;&nbsp;&bull;&nbsp;&nbsp;', $extra).'</small>';
-		$str .= '  </div>';
-		if((int)$settings['file_limit'] === 1) {
-			$str .=  '<input class="plup_single_filler" '.($settings['disabled'] ? ' disabled="disabled" ' : '').' type="hidden" name="' . $settings['name'] . '" value="" />';
-		}
-		$str .= '  <div class="plup_files cf" style="display:none;">';
-		if(is_array($populate)) {
-			foreach($populate as $file) {
-				$file = file::get($file);
-				if($file) {
-					$str .= '<div class="plup_file plup_ok '.($pics && (int)$settings['file_limit'] !== 1 ? 'plup_pic' : '').'" data-setting=\''.( @json_encode(json_decode($file->settings, true), JSON_HEX_APOS | JSON_HEX_TAG) ).'\' id="file_' . $file->id . '" data-thumbnail="'.raichu::url_file($file, 120, 120).'">';
-					// $str .=  '<span class="plup_icon"></span>';
-					if(!$settings['disabled']) {
-						$str .=  '<span class="plup_close" title="Премахни"><i class="glyphicon glyphicon-remove"></i></span>';
-					}
-					$extra = [];
-					if($setting && count($setting)) {
-						if(!$settings['disabled']) {
-							$str .=  '<a class="plup_setting" href="#"><i class="glyphicon glyphicon-cog"></i></a>';
-						}
-						$fdata = @json_decode($file->settings, true);
-						if(is_array($setting)) {
-							foreach($setting as $name => $field) {
-								if(isset($field['visible'])) {
-									if(is_array($fdata) && isset($fdata[$name])) {
-										$extra[] = '<span rel="'.$name.'">' . $fdata[$name] . '</span>';
-									}
-									else {
-										$extra[] = '<span rel="'.$name.'">' . (isset($field['default']) && $field['default'] ? $field['default'] : '') . '</span>';
-									}
-								}
-							}
-						}
-					}
-					$extra[] = 'качен на '.date('d.m.Y H:i', $file->modified);
-					if(count($extra)) {
-						$str .= '<small style="color:silver; float:right; margin-right:10px;">'.implode('&nbsp;&nbsp;&bull;&nbsp;&nbsp;', $extra).'</small>';
-					}
-					//$str .=  '<span class="plup_date">' . date('d.m.Y H:i', $file->modified) . '</span>';
-					$size = $file->size / 1024;
-					$unit = 'KB';
-					if($size > 1000) {
-						$size = $size / 1024;
-						$unit = 'MB';
-					}
-					if($size > 1000) {
-						$size = $size / 1024;
-						$unit = 'GB';
-					}
-					$str .=  '<a draggable="false" target="_blank" href="'.raichu::url_file($file).'" class="plup_title" title="изтегли файла ('.ceil($size).' '.$unit.')"><i class="glyphicon glyphicon-download"></i> ' . $file->name .  '</a>';
-					$str .=  '<span class="plup_progress"><span class="plup_progress_inner" style="width:100%;">&#160;</span></span>';
-					$str .=  '<input class="plup_file_array" '.($settings['disabled'] ? ' disabled="disabled" ' : '').' type="hidden" name="' . $settings['name'] . '" value="' . $file->id . '" title="' . $file->size . '" rel="' . $file->name . '" />';
-					$str .= '</div>';
-				}
-			}
-		}
-		$str .= '  </div>';
-		$str .= '</div>';
-		$tmp = '/api/';
-		if(!$no_script) {
-			$str .= '<scr'.'ipt type="text/javascript">';
-			$str .= '$(function () { plupload.vakata.create("'.str_replace($tmp,'/',url::get('file')).'", "'.$settings['prefix'].'", { "image" : '.($pics ? 'true' : 'false').', "plupload" : "true", "prefix" : "'.$settings['prefix'].'", "_csrf_token" : "'.$_SESSION['_csrf_token'].'" }, "'.$settings['name'].'", '.(int)$settings['max_file_size'].', '.(int)$settings['file_limit'].', '.(int)$settings['max_total_size'].', "'.str_replace($tmp,'/',url::get('file')).'", '.($settings['disabled'] ? 'true' : 'false').', '.json_encode($setting).'); });';
-			$str .= '</script>';
-		}
-		return $str;
 	}
 }
 
