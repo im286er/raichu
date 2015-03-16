@@ -93,6 +93,7 @@ class CRUDModule extends Table implements PermissionsInterface
 		$i = [];
 		foreach($this->config['fields'] as $field => $data) {
 			$this->config['fields'][$field] = $data = array_merge([
+				'type'             => 'text',
 				'read'             => true,
 				'write'            => true,
 				'index'            => false,
@@ -183,7 +184,7 @@ class CRUDModule extends Table implements PermissionsInterface
 				$w[] = $field;
 			}
 			if($definition['special']) {
-				switch($data['special']) {
+				switch($definition['special']) {
 					case 'created':
 					case 'updated':
 						$w[] = $field;
@@ -197,6 +198,18 @@ class CRUDModule extends Table implements PermissionsInterface
 			}
 			if(is_array($data[$field]) || is_object($data[$field])) {
 				$data[$field] = json_encode($data[$field]);
+			}
+			switch($definition['type']) {
+				case 'date':
+					$data[$field] = strtotime($data[$field]);
+					$data[$field] = $data[$field] === false ? '0000-00-00' : date('Y-m-d', $data[$field]);
+					break;
+				case 'datetime':
+					$data[$field] = strtotime($data[$field]);
+					$data[$field] = $data[$field] === false ? '0000-00-00 00:00:00' : date('Y-m-d H:i:s', $data[$field]);
+					break;
+				default:
+					break;
 			}
 		}
 		foreach($data as $k => $v) {
@@ -243,6 +256,18 @@ class CRUDModule extends Table implements PermissionsInterface
 			}
 			if(is_array($data[$field]) || is_object($data[$field])) {
 				$data[$field] = json_encode($data[$field]);
+			}
+			switch($definition['type']) {
+				case 'date':
+					$data[$field] = strtotime($data[$field]);
+					$data[$field] = $data[$field] === false ? '0000-00-00' : date('Y-m-d', $data[$field]);
+					break;
+				case 'datetime':
+					$data[$field] = strtotime($data[$field]);
+					$data[$field] = $data[$field] === false ? '0000-00-00 00:00:00' : date('Y-m-d H:i:s', $data[$field]);
+					break;
+				default:
+					break;
 			}
 		}
 		foreach($data as $k => $v) {
