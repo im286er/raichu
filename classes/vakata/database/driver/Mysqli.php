@@ -155,23 +155,26 @@ class Mysqli extends AbstractDriver
 		}
 		$ref = [];
 		foreach($tmp as $col) {
-			$ref[$col->name] = null;
+			$ref[] = [$col->name, null];
 		}
 		$tmp = [];
 		foreach($ref as $k => $v) {
-			$tmp[] =& $ref[$k];
+			$tmp[] =& $ref[$k][1];
 		}
-		if(!call_user_func_array(array($result, 'bind_result'), $tmp)) {
-			return false;
+		try {
+			if(!call_user_func_array(array($result, 'bind_result'), $tmp)) {
+				return false;
+			}
 		}
+		catch(\Exception $e) {}
 		if(!$result->fetch()) {
 			return false;
 		}
 		$tmp = [];
 		$i = 0;
 		foreach($ref as $k => $v) {
-			$tmp[$i++] = $v;
-			$tmp[$k] = $v;
+			$tmp[$i++] = $v[1];
+			$tmp[$v[0]] = $v[1];
 		}
 		return $tmp;
 	}
