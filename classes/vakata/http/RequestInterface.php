@@ -9,6 +9,7 @@ interface RequestInterface extends MessageInterface
 	public function getCookie($key = null, $default = null, $mode = null);
 	public function getQuery($key = null, $default = null, $mode = null);
 	public function getPost($key = null, $default = null, $mode = null);
+	public function getParam($key = null, $default = null, $mode = null);
 	public function getRequest($key = null, $default = null, $mode = null);
 
 	public function getFile($key = null);

@@ -96,7 +96,7 @@ class Route
 		$url     = array_pop($args);
 		$method  = array_pop($args);
 
-		if(!$method && (is_array($url) || in_array($url, ['GET','HEAD','POST','PATCH','DELETE','PUT','OPTIONS']))) {
+		if(!$method && (is_array($url) || in_array($url, ['GET','HEAD','POST','PATCH','DELETE','PUT','OPTIONS','REPORT']))) {
 			$method = $url;
 			$url = null;
 		}
@@ -133,6 +133,9 @@ class Route
 	public function get($url, callable $handler) {
 		return $this->add('GET', $url, $handler);
 	}
+	public function report($url, callable $handler) {
+		return $this->add('REPORT', $url, $handler);
+	}
 	public function post($url, callable $handler) {
 		return $this->add('POST', $url, $handler);
 	}
@@ -143,7 +146,7 @@ class Route
 		return $this->add('PUT', $url, $handler);
 	}
 	public function patch($url, callable $handler) {
-		return $this->add('PUT', $url, $handler);
+		return $this->add('PATCH', $url, $handler);
 	}
 	public function delete($url, callable $handler) {
 		return $this->add('DELETE', $url, $handler);

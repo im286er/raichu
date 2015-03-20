@@ -116,7 +116,7 @@ class Request implements RequestInterface
 		$data = strpos((string)$this->getHeader('Content-Type'), 'json') !== false ? @json_decode($this->body, true) : $_POST;
 		return $data !== false && $data !== null ? $this->getValue($data, $key, $default, $mode) : null;
 	}
-	public function getParams($key = null, $default = null, $mode = null) {
+	public function getParam($key = null, $default = null, $mode = null) {
 		$data = [];
 		if(strpos((string)$this->getHeader('Content-Type'), 'json') !== false) {
 			$data = @json_decode($this->body, true);
