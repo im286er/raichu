@@ -171,7 +171,7 @@ class Route
 			return;
 		}
 		$this->ran = true;
-		$request = str_replace('//', '/', '/'.trim($url->request(), '/').'/');
+		$request = str_replace('//', '/', '/'.urldecode(trim($url->request(), '/')).'/');
 		$matches = [];
 		try {
 			foreach($this->preprocessors as $regex => $proc) {
