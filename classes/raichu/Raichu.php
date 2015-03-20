@@ -10,13 +10,13 @@ class Raichu
 	private function __construct() { }
 
 	public static function instance($c, array $args = [], $named = false) {
-		if($named && !isset(static::$conf['classmap'][strtolower($c)])) {
+		if($named && (!isset(static::$conf['classmap']) || !isset(static::$conf['classmap'][strtolower($c)]))) {
 			throw new \Exception('Class not found', 404);
 		}
 		if(!static::$dice) {
 			static::$dice = new \Dice\Dice;
 		}
-		if(isset(static::$conf['classmap'][strtolower($c)])) {
+		if(isset(static::$conf['classmap']) && isset(static::$conf['classmap'][strtolower($c)])) {
 			$c = static::$conf['classmap'][strtolower($c)];
 			if(is_array($c)) {
 				$args = isset($c[1]) ? $c[1] : [];
