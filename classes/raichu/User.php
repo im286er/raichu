@@ -17,14 +17,14 @@ class User implements UserInterface
 		return $this->user->valid();
 	}
 	public function get($key) {
-		return $this->user->get($key);
-	}
-	public function __get($key) {
-		$temp = $this->get($key);
+		$temp = $this->user->get($key);
 		if($temp === null && is_array($this->meta) && isset($this->meta[$key])) {
-			return $this->meta[$key];
+			$temp = $this->meta[$key];
 		}
 		return $temp;
+	}
+	public function __get($key) {
+		return $this->get($key);
 	}
 
 	public function login($data = null) {
