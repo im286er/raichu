@@ -98,6 +98,7 @@ class CRUDModule extends Table implements PermissionsInterface
 				'write'            => true,
 				'index'            => false,
 				'special'          => false,
+				'pattern'          => false,
 				'check_user_read'  => false,
 				'check_user_write' => false
 			], $data);
@@ -211,6 +212,9 @@ class CRUDModule extends Table implements PermissionsInterface
 				default:
 					break;
 			}
+			if($definition['pattern'] && !preg_match('(^'.$definition['pattern'].'$)', $data[$field])) {
+				throw new \Exception('Некоректни данни', 406);
+			}
 		}
 		foreach($data as $k => $v) {
 			if(!in_array($k, $w)) {
@@ -268,6 +272,9 @@ class CRUDModule extends Table implements PermissionsInterface
 					break;
 				default:
 					break;
+			}
+			if($definition['pattern'] && !preg_match('(^'.$definition['pattern'].'$)', $data[$field])) {
+				throw new \Exception('Некоректни данни', 406);
 			}
 		}
 		foreach($data as $k => $v) {
