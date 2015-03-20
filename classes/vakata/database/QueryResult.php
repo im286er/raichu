@@ -34,6 +34,12 @@ class QueryResult
 		$this->row = $this->drv->nextr($this->rsl);
 		return $this->row !== false && $this->row !== null;
 	}
+	public function f($key) {
+		if(isset($this->row) && is_array($this->row) && isset($this->row[$key])) {
+			return $this->row[$key];
+		}
+		return null;
+	}
 	public function seek($offset) {
 		return @$this->drv->seek($this->rsl, $offset) ? true : false;
 	}
