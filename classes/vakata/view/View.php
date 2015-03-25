@@ -4,6 +4,8 @@ namespace vakata\view;
 class View
 {
 	protected static $vdir = '';
+	protected static $vars = [];
+
 	protected $file = null;
 	protected $data = [];
 
@@ -16,8 +18,10 @@ class View
 		$this->data[$name] = $value;
 		return $this;
 	}
-	public function render() {
+	public function render(array $data = []) {
+		extract(static::$vars);
 		extract($this->data);
+		extract($data);
 		try {
 			ob_start();
 			include $this->file;
@@ -32,7 +36,9 @@ class View
 	public static function get($file, $data = null) {
 		return (new self($file, $data))->render();
 	}
-	
+	public static function share($var, $value) {
+		static::$vars[$var] = $value;
+	}
 	public static function dir($dir) {
 		static::$vdir = realpath($dir);
 	}
