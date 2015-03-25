@@ -208,4 +208,7 @@ class Request implements RequestInterface
 			}
 		}
 	}
+	public function validateChecksum($key, $field = 'checksum', $algo = 'sha1') {
+		return base64_encode(hash_hmac($algo, explode('&' . $field, $this->body, 2)[0], $key, true)) === $this->getPost($field);
+	}
 }
