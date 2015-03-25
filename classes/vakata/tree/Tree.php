@@ -23,6 +23,13 @@ class Tree
 	public function node($id) {
 		return new TreeNode($this->db, $this->tb, $id, $this->fields);
 	}
+	public function root() {
+		$temp = [];
+		foreach($this->db->all("SELECT * FROM {$this->tb} WHERE {$this->fields['parent_id']} = ? ORDER BY {$this->fields['position']}", [ 0 ]) as $data) {
+			$temp[] = new TreeNode($this->db, $this->tb, $data[$this->fields['id']], $this->fields, $data);
+		}
+		return $temp;
+	}
 	public function create($parent, $position = 0) {
 		$parent = $this->node((int)$parent);
 		$position = min((int)$position, $parent->childrenCount());
