@@ -57,7 +57,7 @@ set_exception_handler(function ($e) {
 			echo '<p style="margin:0; padding:0 1em; line-height:2em; '.($k==0?'background:lightyellow; border-top:1px solid gray; border-bottom:1px solid gray;':'').' '.($k%2 == 1 ? 'background:#ebebeb' : '').'">';
 			echo '<span style="display:inline-block; min-width:500px;"><code style="color:green">'.(isset($trace['file'])?$trace['file']:'').'</code>';
 			echo '<code style="color:gray"> '.(isset($trace['file'])?':':'').' </code>';
-			echo '<code style="color:#8b0000">'.$trace['line'].'</code></span> ';
+			echo '<code style="color:#8b0000">'.(isset($trace['line'])?$trace['line']:'').'</code></span> ';
 			if(isset($trace['class'])) {
 				echo '<code style="color:navy">'.$trace['class'].$trace['type'].$trace['function'].'()</code>';
 			}

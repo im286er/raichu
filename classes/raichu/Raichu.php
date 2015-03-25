@@ -6,33 +6,36 @@ class Raichu
 	private static $dice = null;
 	private static $repl = [];
 	private static $conf = [];
+	private static $inst = [];
 
 	private function __construct() { }
 
-	public static function instance($c, array $args = [], $named = false) {
-		if($named && (!isset(static::$conf['classmap']) || !isset(static::$conf['classmap'][strtolower($c)]))) {
+	public static function register($name, $class, array $args = []) {
+		if(isset(static::$inst[strtolower($name)])) {
+			throw new \Exception('Shortcut already registered', 500);
+		}
+		static::$inst[strtolower($name)] = [ $class, $args ];
+	}
+	public static function instance($class, array $args = [], $named_only = false) {
+		if($named_only && !isset(static::$inst[strtolower($class)])) {
 			throw new \Exception('Class not found', 404);
 		}
 		if(!static::$dice) {
 			static::$dice = new \Dice\Dice;
 		}
-		if(isset(static::$conf['classmap']) && isset(static::$conf['classmap'][strtolower($c)])) {
-			$c = static::$conf['classmap'][strtolower($c)];
-			if(is_array($c)) {
-				$args = isset($c[1]) ? $c[1] : [];
-				$c = $c[0];
-			}
+		if(isset(static::$inst[strtolower($class)])) {
+			list($class, $args) = static::$inst[strtolower($class)];
 		}
-		if(isset(static::$repl[$c])) {
-			$c = static::$repl[$c];
+		if(isset(static::$repl[$class])) {
+			$class = static::$repl[$class];
 		}
-		return static::$dice->create($c, $args);
+		return static::$dice->create($class, $args);
 	}
-	public static function __callStatic($c, array $args = []) {
-		return static::instance($c, $args);
+	public static function __callStatic($class, array $args = []) {
+		return static::instance($class, $args);
 	}
 
-	public static function getConfig($key) {
+	public static function get($key) {
 		$key = explode('.', $key);
 		$tmp = static::$conf;
 		foreach($key as $k) {
@@ -43,7 +46,6 @@ class Raichu
 		}
 		return $tmp;
 	}
-
 	public static function config(array $settings = []) {
 		static::$conf = $settings;
 		if(!static::$dice) {

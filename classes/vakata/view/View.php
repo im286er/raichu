@@ -51,6 +51,7 @@ class View
 			return false;
 		}
 	}
+	
 	protected static function normalize($view) {
 		if(static::$vdir) {
 			$view = static::$vdir . DIRECTORY_SEPARATOR . $view;

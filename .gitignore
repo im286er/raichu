@@ -4,3 +4,8 @@
 */admin/*
 logs/*
 uploads/*
+dump.sql
+raichu.sublime-*
+Vagrantfile
+.vagrant/*
+puphpet/*
