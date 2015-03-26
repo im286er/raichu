@@ -4,7 +4,7 @@ define('LOGROOT', __DIR__);
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'bootstrap.php';
 
-\raichu\Raichu::config([
+\vakata\raichu\Raichu::config([
 	'database' => 'mysqli://root@127.0.0.1/raichu',
 	'cache'    => 'file://' . __DIR__, // memcache://127.0.0.1
 	'session'  => [
@@ -36,7 +36,5 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . '
 	'csp'      => false,
 	'csrf'     => true,
 	'cors'     => false, // enable CORS globally
-	// shortcuts for creating instances
-	'classmap' => [
-	]
+	'views'    => false // dir containing views __DIR__ . DIRECTORY_SEPARATOR . 'views'
 ]);
