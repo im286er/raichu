@@ -69,15 +69,12 @@ class View
 	}
 	
 	protected static function normalize($view) {
-		if(static::$dirs) {
-			$view = static::$vdir . DIRECTORY_SEPARATOR . $view;
-		}
 		if(!preg_match('(\.php$)i',$view)) {
 			$view .= '.php';
 		}
 		foreach(static::$dirs as $dir) {
 			if(is_file($dir . DIRECTORY_SEPARATOR . $view) && is_readable($dir . DIRECTORY_SEPARATOR . $view)) {
-				return $view;
+				return $dir . DIRECTORY_SEPARATOR . $view;
 			}
 		}
 		throw new ViewException('View not found', 404);

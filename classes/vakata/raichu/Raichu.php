@@ -1,35 +1,78 @@
 <?php
-namespace raichu;
+namespace vakata\raichu;
 
 class Raichu
 {
-	private static $dice = null;
-	private static $repl = [];
 	private static $conf = [];
+
+	private static $repl = [];
 	private static $inst = [];
+	private static $args = [];
+
+	private static $name = [];
 
 	private function __construct() { }
 
-	public static function register($name, $class, array $args = []) {
-		if(isset(static::$inst[strtolower($name)])) {
+	public static function register($alias, $class, array $args = []) {
+		if(isset(static::$name[strtolower($alias)])) {
 			throw new \Exception('Shortcut already registered', 500);
 		}
-		static::$inst[strtolower($name)] = [ $class, $args ];
+		static::$name[strtolower($alias)] = [ $class, $args ];
 	}
 	public static function instance($class, array $args = [], $named_only = false) {
-		if($named_only && !isset(static::$inst[strtolower($class)])) {
+		if($named_only && !isset(static::$name[strtolower($class)])) {
 			throw new \Exception('Class not found', 404);
 		}
-		if(!static::$dice) {
-			static::$dice = new \Dice\Dice;
-		}
-		if(isset(static::$inst[strtolower($class)])) {
-			list($class, $args) = static::$inst[strtolower($class)];
+		if(isset(static::$name[strtolower($class)])) {
+			list($class, $args) = static::$name[strtolower($class)];
 		}
 		if(isset(static::$repl[$class])) {
 			$class = static::$repl[$class];
 		}
-		return static::$dice->create($class, $args);
+		if(isset(static::$args[$class])) {
+			$args = array_merge($args, static::$args[$class]);
+		}
+		if(isset(static::$inst[$class])) {
+			return static::$inst[$class];
+		}
+
+		$args			= array_values($args);
+		$reflection		= new \ReflectionClass($class);
+		$constructor	= $reflection->getConstructor();
+		$arguments		= [];
+		$instance		= null;
+		try {
+			if($constructor) {
+				foreach($constructor->getParameters() as $k => $v) {
+					if($v->getClass()) {
+						$name = $v->getClass()->name;
+						if(count($args) && $args[0] instanceof $name) {
+							$arguments[] = array_shift($args);
+							continue;
+						}
+						$temp = static::instance('\\' . $name);
+						if($temp !== null) {
+							$arguments[] = $temp;
+							continue;
+						}
+						$arguments[] = $v->isOptional() ? $v->getDefaultValue() : null;
+						continue;
+					}
+					if(count($args)) {
+						$arguments[] = array_shift($args);
+						continue;
+					}
+					$arguments[] = $v->isOptional() ? $v->getDefaultValue() : null;
+				}
+			}
+			$instance = count($arguments) ? $reflection->newInstanceArgs($arguments) : new $reflection->name;
+		} catch(\ReflectionException $ignore) {
+			$instance = null;
+		}
+		if(array_key_exists($class, static::$inst)) {
+			static::$inst[$class] = $instance;
+		}
+		return $instance;
 	}
 	public static function __callStatic($class, array $args = []) {
 		return static::instance($class, $args);
@@ -48,82 +91,54 @@ class Raichu
 	}
 	public static function config(array $settings = []) {
 		static::$conf = $settings;
-		if(!static::$dice) {
-			static::$dice = new \Dice\Dice;
-		}
 
 		// single instances
-		$shared = new \Dice\Rule;
-		$shared->shared = true;
-		static::$dice->addRule([
-			'vakata\\database\\DB',
-			'vakata\\cache\\Memcache',
-			'vakata\\cache\\Filecache',
-			'vakata\\http\\Request',
-			'vakata\\http\\Response',
-			'vakata\\http\\Url',
-			'vakata\\route\\Route',
-			'vakata\\upload\\Upload',
-			'vakata\\upload\\UploadDatabase',
-			'vakata\\user\\User',
-			'vakata\\log\\Log',
-			'vakata\\event\\Event',
-			'vakata\\random\\Random'
-		], $shared);
+		static::$inst['\\vakata\\database\\DB'] = null;
+		static::$inst['\\vakata\\cache\\Dummy'] = null;
+		static::$inst['\\vakata\\cache\\Memcache'] = null;
+		static::$inst['\\vakata\\cache\\Filecache'] = null;
+		static::$inst['\\vakata\\http\\Request'] = null;
+		static::$inst['\\vakata\\http\\Response'] = null;
+		static::$inst['\\vakata\\http\\Url'] = null;
+		static::$inst['\\vakata\\route\\Route'] = null;
+		static::$inst['\\vakata\\upload\\Upload'] = null;
+		static::$inst['\\vakata\\upload\\UploadDatabase'] = null;
+		static::$inst['\\vakata\\user\\User'] = null;
+		static::$inst['\\vakata\\log\\Log'] = null;
+		static::$inst['\\vakata\\event\\Event'] = null;
+		static::$inst['\\vakata\\random\\Random'] = null;
+		static::$inst['\\vakata\\user\\User'] = null;
 
-		// interface substitutions
-		$substitution = new \Dice\Rule;
-		$substitution->substitutions['vakata\\database\\DatabaseInterface'] = new \Dice\Instance('vakata\\database\\DB');
-		$substitution->substitutions['vakata\\cache\\CacheInterface'] = isset($settings['cache']) && $settings['cache'] && strpos($settings['cache'], 'memcache://') !== false ?
-			new \Dice\Instance('vakata\\cache\\Memcache') :
-			new \Dice\Instance('vakata\\cache\\Filecache');
-		$substitution->substitutions['vakata\\upload\\UploadInterface'] = isset($settings['uploads']) && $settings['uploads'] && isset($settings['uploads']['database']) ?
-			new \Dice\Instance('vakata\\upload\\UploadDatabase') :
-			new \Dice\Instance('vakata\\upload\\Upload');
-		$substitution->substitutions['vakata\\user\\UserInterface'] = new \Dice\Instance('vakata\\user\\User');
-		static::$dice->addRule('*', $substitution);
-
+		// database
 		if(isset($settings['database']) && $settings['database']) {
-			$database = new \Dice\Rule;
-			$database->shared = true;
-			$database->constructParams = [$settings['database']];
-			static::$dice->addRule('vakata\\database\\DB', $database);
-			static::$repl['db'] = 'vakata\\database\\DB';
+			static::$repl['\\vakata\\database\\DatabaseInterface'] = static::$repl['db'] = '\\vakata\\database\\DB';
+			static::$args[static::$repl['db']] = [$settings['database']];
 		}
-		static::$repl['cache'] = 'vakata\\cache\\Dummy';
+
+		// cache
+		static::$repl['vakata\\cache\\CacheInterface'] = static::$repl['cache'] = '\\vakata\\cache\\Dummy';
+		if(isset($settings['cache']) && $settings['cache'] && strpos($settings['cache'], 'memcache://') !== false) {
+			static::$repl['\\vakata\\cache\\CacheInterface'] = static::$repl['cache'] = '\\vakata\\cache\\Memcache';
+		}
+		if(isset($settings['cache']) && $settings['cache'] && strpos($settings['cache'], 'file://') !== false) {
+			static::$repl['\\vakata\\cache\\CacheInterface'] = static::$repl['cache'] = '\\vakata\\cache\\Filecache';
+		}
 		if(isset($settings['cache']) && $settings['cache']) {
-			$cache = new \Dice\Rule;
-			$cache->shared = true;
-			$cache->constructParams = [explode('://', $settings['cache'])[1]];
-			static::$dice->addRule('vakata\\cache\\' . (strpos($settings['cache'], 'memcache://') !== false ? 'Memcache' : 'Filecache'), $cache);
-			static::$repl['cache'] = 'vakata\\cache\\' . (strpos($settings['cache'], 'memcache://') !== false ? 'Memcache' : 'Filecache');
+			static::$args[static::$repl['cache']] = [explode('://', $settings['cache'])[1]];
 		}
+
+		// uploads
 		if(isset($settings['uploads']) && $settings['uploads']) {
-			$uploads = new \Dice\Rule;
-			$uploads->shared = true;
-			$uploads->constructParams = [$settings['uploads']['directory']];
-			static::$dice->addRule('vakata\\upload\\Upload', $uploads);
-			static::$repl['upload'] = 'vakata\\upload\\Upload';
-
-			$file = new \Dice\Rule;
-			$file->constructParams = [$settings['uploads']['directory']];
-			static::$dice->addRule('vakata\\file\\FileUpload', $file);
-			static::$repl['file'] = 'vakata\\file\\FileUpload';
-
-			if(isset($settings['uploads']['database']) && $settings['uploads']['database']) {
-				$uploads_database = new \Dice\Rule;
-				$uploads_database->shared = true;
-				$uploads_database->constructParams = [$settings['uploads']['directory'], $settings['uploads']['database']];
-				$uploads_database->substitutions['vakata\\database\\DatabaseInterface'] = new \Dice\Instance('vakata\\database\\DB');
-				static::$dice->addRule('vakata\\upload\\UploadDatabase', $uploads_database);
-				static::$repl['upload'] = 'vakata\\upload\\UploadDatabase';
-
-				$file_database = new \Dice\Rule;
-				$file_database->constructParams = [$settings['uploads']['database']];
-				$file_database->substitutions['vakata\\database\\DatabaseInterface'] = new \Dice\Instance('vakata\\database\\DB');
-				static::$dice->addRule('vakata\\file\\FileDatabase', $file_database);
-				static::$repl['file'] = 'vakata\\file\\FileDatabase';
-			}
+			static::$repl['file'] = '\\vakata\\file\\FileUpload';
+			static::$args['\\vakata\\file\\FileUpload'] = [$settings['uploads']['directory'],$settings['uploads']['database']];
+			static::$repl['upload'] = static::$repl['\\vakata\\cache\\UploadInterface'] = '\\vakata\\upload\\Upload';
+			static::$args['\\vakata\\upload\\Upload'] = [$settings['uploads']['directory']];
+		}
+		if(isset($settings['uploads']) && $settings['uploads'] && isset($settings['uploads']['database'])) {
+			static::$repl['file'] = '\\vakata\\file\\FileDatabase';
+			static::$args['\\vakata\\file\\FileDatabase'] = [$settings['uploads']['database']];
+			static::$repl['upload'] = static::$repl['\\vakata\\cache\\UploadInterface'] = '\\vakata\\upload\\UploadDatabase';
+			static::$args['\\vakata\\upload\\UploadDatabase'] = [$settings['uploads']['directory'],$settings['uploads']['database']];
 		}
 
 		// session handling
@@ -133,10 +148,10 @@ class Raichu
 					session_save_path($settings['session']['location']);
 				}
 				if($settings['session']['storage'] === 'database') {
-					session_set_save_handler(static::$dice->create('vakata\\session\\SessionDatabase', [$settings['session']['location']]));
+					session_set_save_handler(static::instance('\\vakata\\session\\SessionDatabase', [$settings['session']['location']]));
 				}
 				if($settings['session']['storage'] === 'cache') {
-					session_set_save_handler(static::$dice->create('vakata\\session\\SessionCache', [$settings['session']['location']]));
+					session_set_save_handler(static::instance('\\vakata\\session\\SessionCache', [$settings['session']['location']]));
 				}
 			}
 			if(session_status() === PHP_SESSION_NONE) {
@@ -144,70 +159,65 @@ class Raichu
 			}
 		}
 
-		$lg = static::$dice->create('vakata\\log\\Log');
-		$rt = static::$dice->create('vakata\\route\\Route');
-		$ur = static::$dice->create('vakata\\http\\Url');
-		$rq = static::$dice->create('vakata\\http\\Request');
-		$rs = static::$dice->create('vakata\\http\\Response');
+		$lg = static::instance('\\vakata\\log\\Log');
+		$rt = static::instance('\\vakata\\route\\Route');
+		$ur = static::instance('\\vakata\\http\\Url');
+		$rq = static::instance('\\vakata\\http\\Request');
+		$rs = static::instance('\\vakata\\http\\Response');
 
-		// user handling
-		$m = static::$dice->create('\\vakata\\user\\authentication\\Dummy');
+		// user
+		$m = static::instance('\\vakata\\user\\authentication\\Dummy');
 		if(isset($settings['user']) && $settings['user']) {
 			$auth = [];
 			if(isset($settings['user']['oauth']) && is_array($settings['user']['oauth'])) {
 				foreach($settings['user']['oauth'] as $provider => $args) {
 					$args[] = $ur->base() . 'login/' . $provider . '/callback';
-					$auth[] = static::$dice->create('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $args);
+					$auth[] = static::instance('\\vakata\\user\\authentication\\OAuth\\' . ucwords($provider), $args);
 				}
 			}
 			if(isset($settings['user']['password']) && $settings['user']['password']) {
-				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Password', is_array($settings['user']['password']) ? $settings['user']['password'] : [$settings['user']['password']]);
+				$auth[] = static::instance('\\vakata\\user\\authentication\\Password', is_array($settings['user']['password']) ? $settings['user']['password'] : [$settings['user']['password']]);
 			}
 			if(isset($settings['user']['ldap']) && $settings['user']['ldap']) {
-				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Ldap', [$settings['user']['ldap']]);
+				$auth[] = static::instance('\\vakata\\user\\authentication\\Ldap', [$settings['user']['ldap']]);
 			}
 			if(isset($settings['user']['certificate']) && $settings['user']['certificate']) {
-				$auth[] = static::$dice->create('\\vakata\\user\\authentication\\Certificate');
+				$auth[] = static::instance('\\vakata\\user\\authentication\\Certificate');
 			}
-			$m = static::$dice->create('\\vakata\\user\\authentication\\Manager', [$auth]);
+			$m = static::instance('\\vakata\\user\\authentication\\Manager', [$auth]);
 			if(isset($settings['user']['session']) && $settings['user']['session']) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorSession', [$m]);
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorSession', [$m]);
 			}
 			if(isset($settings['user']['token']) && $settings['user']['token']) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorToken', [$m, $settings['user']['token']]);
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorToken', [$m, $settings['user']['token']]);
 			}
 			if(isset($settings['user']['database']) && $settings['user']['database']) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorDatabase', [$m, $settings['user']['database']]);
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorDatabase', [$m, $settings['user']['database']]);
 			}
 			if(isset($settings['user']['ldapdeco']) && is_array($settings['user']['ldapdeco'])) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorLDAP', array_merge([$m], $settings['user']['ldapdeco']));
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorLDAP', array_merge([$m], $settings['user']['ldapdeco']));
 			}
 			if(isset($settings['user']['permissions']) && $settings['user']['permissions']) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorPermissions', array_merge([$m], [$settings['user']['permissions']]));
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorPermissions', array_merge([$m], [$settings['user']['permissions']]));
 			}
 			if(isset($settings['user']['groups']) && $settings['user']['groups']) {
-				$m = static::$dice->create('\\vakata\\user\\authentication\\DecoratorGroups', array_merge([$m], [$settings['user']['groups']]));
+				$m = static::instance('\\vakata\\user\\authentication\\DecoratorGroups', array_merge([$m], [$settings['user']['groups']]));
 			}
 		}
-		$user = new \Dice\Rule;
-		$user->shared = true;
-		$user->constructParams = [$m];
-		static::$dice->addRule('vakata\\user\\User', $user);
-		$ruser = new \Dice\Rule;
-		$ruser->shared = true;
-		$ruser->substitutions['vakata\\user\\UserInterface'] = new \Dice\Instance('vakata\\user\\User');
-		static::$dice->addRule('raichu\\User', $ruser);
-		static::$repl['user'] = 'raichu\\User';
+		static::$repl['user'] = static::$repl['\\vakata\\user\\UserInterface'] = '\\vakata\\user\\User';
+		static::$args['\\vakata\\user\\User'] = [$m];
+		
+		// misc replacements
+		static::$repl['route']		= '\\vakata\\route\\Route';
+		static::$repl['url']		= '\\vakata\\http\\Url';
+		static::$repl['request']	= '\\vakata\\http\\Request';
+		static::$repl['response']	= '\\vakata\\http\\Response';
+		static::$repl['log']		= '\\vakata\\log\\Log';
+		static::$repl['event']		= '\\vakata\\event\\Event';
+		static::$repl['random']		= '\\vakata\\random\\Random';
 
-		static::$repl['route'] = 'vakata\\route\\Route';
-		static::$repl['url'] = 'vakata\\http\\Url';
-		static::$repl['request'] = 'vakata\\http\\Request';
-		static::$repl['response'] = 'vakata\\http\\Response';
-		static::$repl['log'] = 'vakata\\log\\Log';
-		static::$repl['event'] = 'vakata\\event\\Event';
-		static::$repl['random'] = 'vakata\\random\\Random';
-
-		static::$repl['view'] = 'vakata\\view\\View';
+		// views
+		static::$repl['view']		= '\\vakata\\view\\View';
 		if(isset($settings['views']) && is_dir(realpath($settings['views']))) {
 			\vakata\view\View::dir($settings['views']);
 		}

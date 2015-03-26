@@ -1,7 +1,7 @@
 <?php
 namespace raichu\permission;
 
-use \raichu\Raichu as raichu;
+use \vakata\raichu\Raichu as raichu;
 
 trait TraitPermission
 {

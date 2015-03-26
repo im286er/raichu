@@ -30,8 +30,8 @@ class DecoratorGroups implements AuthenticationInterface
 				'SELECT g.id, g.name, g.permissions, l.primary_group FROM ' . $this->tb . '_link l, ' . $this->tb . ' g WHERE l.user_id = ? AND g.id = l.group_id ORDER BY l.primary_group ASC',
 				[$temp['id']]);
 
-			$temp['group'] = null;
-			$temp['groups'] = [];
+			$temp['primaryGroup'] = null;
+			$temp['group'] = [];
 			if(!isset($temp['permissions']) || !is_array($temp['permissions'])) {
 				$temp['permissions'] = [];
 			}
@@ -42,11 +42,11 @@ class DecoratorGroups implements AuthenticationInterface
 					$perm = array_merge($perm, $v['permissions']);
 				}
 				if((int)$v['primary_group']) {
-					$temp['group'] = (int)$v['id'];
+					$temp['primaryGroup'] = (int)$v['id'];
 				}
-				$temp['groups'][(int)$v['id']] = $v['name'];
+				$temp['group'][(int)$v['id']] = $v['name'];
 			}
-			$temp['permissions'] = array_unique(array_filter(array_map('strtolower',array_merge($perm, $temp['permissions']))));
+			$temp['permission'] = $temp['permissions'] = array_unique(array_filter(array_map('strtolower',array_merge($perm, $temp['permissions']))));
 		}
 		return $temp;
 	}

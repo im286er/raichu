@@ -3,7 +3,7 @@ namespace vakata\database\orm;
 
 use vakata\dabatase\DatabaseException;
 
-class TableRow implements TableRowInterface, \JsonSerializable
+class TableRow implements TableRowInterface
 {
 	protected $tbl  = null;
 	protected $data = [];
@@ -11,7 +11,7 @@ class TableRow implements TableRowInterface, \JsonSerializable
 	protected $chng = [];
 	protected $cche = [];
 
-	public function __construct(TableInterface $tbl, array $data = []) {
+	public function __construct(Table $tbl, array $data = []) {
 		$this->tbl  = $tbl;
 		foreach($this->tbl->getColumns() as $column) {
 			if(isset($data[$column])) {
@@ -20,7 +20,7 @@ class TableRow implements TableRowInterface, \JsonSerializable
 		}
 		foreach($this->tbl->getRelations() as $rl) {
 			$this->inst[$rl['field']] = [
-				'class'       => clone $rl['table'],
+				'class'       => $rl['table'],
 				'many'        => $rl['many'],
 				'foreign_key' => $rl['foreign_key'],
 				'local_key'   => $rl['local_key'],
@@ -29,35 +29,44 @@ class TableRow implements TableRowInterface, \JsonSerializable
 		}
 	}
 
+	public function getTableName() {
+		return $this->tbl->getTableName();
+	}
+	public function getIndexed() {
+		return $this->tbl->getIndexed();
+	}
+	public function getColumns() {
+		return $this->tbl->getColumns();
+	}
+	public function getPrimaryKey() {
+		return $this->tbl->getPrimaryKey();
+	}
+	public function getRelations() {
+		return $this->tbl->getRelations();
+	}
+	public function getRelationKeys() {
+		return $this->tbl->getRelationKeys();
+	}
+
 	public function getID() {
 		$pk = $this->tbl->getPrimaryKey();
 		return $this->{$pk};
 	}
-	public function getTable() {
-		return $this->tbl;
-	}
-
-	public function offsetGet($offset) {
-		if(!$this->offsetExists($offset)) {
-			//throw new ORMException('Invalid offset used with offsetGet', 404);
-			return null;
-		}
-		return isset($this->inst[$offset]) ? $this->__call($offset, []) : $this->__get($offset);
-	}
-	public function offsetSet($offset, $value) {
-		$this->__set($offset, $value);
-	}
-	public function offsetExists($offset) {
-		return in_array($offset, array_filter(array_unique(array_merge(array_keys($this->data), array_keys($this->chng), array_keys($this->inst)))));
-	}
-	public function offsetUnset($offset) {
-		if(isset($this->chng[$offset])) {
-			unset($this->chng[$offset]);
-		}
-	}
 
 	public function __get($key) {
-		return isset($this->chng[$key]) ? $this->chng[$key] : (isset($this->data[$key]) ? $this->data[$key] : null);
+		if(isset($this->chng[$key])) {
+			return $this->chng[$key];
+		}
+		if(isset($this->data[$key])) {
+			return $this->data[$key];
+		}
+		if(isset($this->inst[$key])) {
+			$temp = $this->{$key}();
+			if(isset($temp)) {
+				return $this->inst[$key]['many'] ? $temp : (isset($temp[0]) ? $temp[0] : null);
+			}
+		}
+		return null;
 	}
 	public function __call($key, $args) {
 		if(!isset($this->inst[$key])) {
@@ -67,98 +76,38 @@ class TableRow implements TableRowInterface, \JsonSerializable
 		if(count($args)) {
 			$ckey .= '_' . md5(serialize($args));
 		}
-		if(!isset($this->cche[$ckey])) {
-			$inst = $this->inst[$key];
-			$lkey = $inst['local_key'];
-			$pkey = $this->tbl->getPrimaryKey();
-
-			if(isset($args[0]) && (is_int($args[0]) || is_numeric($args[0]))) {
-				$args[1] = [ (int)$args[0] ];
-				$args[0] = ' '.$inst['class']->getPrimaryKey().' = ? ';
-			}
-
-			if(isset($args[0]) && is_array($args[0])) {
-				$filter = array_merge([
-					'l' => null,
-					'p' => 0,
-					'o' => null,
-					'd' => 0,
-					'q' => ''
-				], $args[0]);
-				if(!isset($args[2]) && isset($filter['o']) && in_array($filter['o'], $inst['class']->getColumns())) {
-					$args[2] = $filter['o'];
-				}
-				if(!isset($args[3]) && isset($filter['l']) && (int)$filter['l']) {
-					$args[3] = (int)$filter['l'];
-				}
-				if(!isset($args[4]) && isset($args[3]) && isset($filter['p'])) {
-					$args[4] = (int)$filter['p'] * $args[3];
-				}
-				if(isset($filter['d']) && isset($args[2]) && strpos($args[2], 'ASC') === false && strpos($args[2], 'DESC') === false) {
-					$args[2] .= (int)$filter['d'] ? ' DESC' : ' ASC';
-				}
-				$sql = [];
-				$par = [];
-				foreach($inst['class']->getColumns() as $column) {
-					if(isset($filter[$column])) {
-						if(!is_array($filter[$column])) {
-							$filter[$column] = [$filter[$column]];
-						}
-						if(isset($filter[$column]['beg']) && isset($filter[$column]['end'])) {
-							$sql[] = ' ' . $column . ' BETWEEN ? AND ? ';
-							$par[] = $filter[$column]['beg'];
-							$par[] = $filter[$column]['end'];
-							continue;
-						}
-						if(count($filter[$column])) {
-							$sql[] = ' ' . $column . ' IN ('.implode(',', array_fill(0, count($filter[$column]), '?')).') ';
-							$par = array_merge($par, $filter[$column]);
-							continue;
-						}
-					}
-				}
-				$indexed = $inst['class']->getIndexed();
-				if(isset($filter['q']) && strlen($filter['q']) && count($indexed)) {
-					$sql[] = ' MATCH ('.implode(',', $indexed).') AGAINST (?) ';
-					$par[] = $filter['q'];
-				}
-				$args[0] = !count($sql) ? null : implode(' AND ', $sql);
-				$args[1] = !count($par) ? null : $par;
-			}
-
-			if(!isset($args[0])) { $args[0] = ' 1 = 1 '; }
-			if(!isset($args[1])) { $args[1] = []; }
-			if(!isset($args[2])) { $args[2] = null; }
-			if(!isset($args[3])) { $args[3] = null; }
-			if(!isset($args[4])) { $args[4] = null; }
-
-			if($inst['pivot']) {
-				$ids = $this->{$pkey} ? 
-					$this->tbl->getDatabase()->all('SELECT ' . $inst['foreign_key'] . ' FROM ' . $inst['pivot'] . ' WHERE ' . $inst['local_key'] . ' = ?', [$this->{$pkey}]) : 
-					[];
-				if(count($ids)) {
-					$this->cche[$ckey] = $inst['class']->read($inst['class']->getPrimaryKey() . ' IN ('.implode(',',array_fill(0, count($ids), '?')).') AND ('.$args[0].') ', array_merge($ids, $args[1]), $args[2], $args[3], $args[4]);
-				}
-				else {
-					$this->cche[$ckey] = $inst['class']->read('1 = 0');
-				}
-			}
-			else {
-				if($this->{$lkey}) {
-					$this->cche[$ckey] = $inst['class']->read($inst['foreign_key'] . ' = ? AND ('.$args[0].') ', array_merge([$this->{$lkey}], $args[1]), $args[2], $args[3], $args[4], false);
-				}
-				else {
-					$this->cche[$ckey] = $inst['class']->read('1 = 0');
-				}
-			}
-		}
-		if($this->inst[$key]['many']) {
+		if(isset($this->cche[$ckey])) {
 			return $this->cche[$ckey];
 		}
-		if(!isset($this->cche[$ckey][0])) {
-			$this->cche[$ckey][] = [];
+
+		$inst = $this->inst[$key];
+		$lkey = $inst['local_key'];
+		$pkey = $this->tbl->getPrimaryKey();
+		$tbl  = clone $inst['class'];
+
+		if($inst['pivot']) {
+			$ids = $this->{$pkey} ? 
+				$this->tbl->getDatabase()->all('SELECT ' . $inst['foreign_key'] . ' FROM ' . $inst['pivot'] . ' WHERE ' . $inst['local_key'] . ' = ?', [$this->{$pkey}]) : 
+				[];
+			return $this->cche[$ckey] = count($ids) ?
+				$tbl->filter($inst['class']->getPrimaryKey() . ' IN ('.implode(',',array_fill(0, count($ids), '?')).')', $ids)->read(isset($args[0]) ? $args[0] : []) :
+				$tbl->filter('1 = 0')->read();
 		}
-		return $this->cche[$ckey][0];
+		return $this->cche[$ckey] = $this->{$lkey} ? 
+			$tbl->filter($inst['foreign_key'] . ' = ?', [$this->{$lkey}])->read(isset($args[0]) ? $args[0] : []) : 
+			$tbl->filter('1 = 0')->read();
+	}
+
+	public function toArray($full = true) {
+		$temp = array_merge($this->data, $this->chng);
+		if($full) {
+			foreach($this->inst as $k => $v) {
+				if($this->{$k}) {
+					$temp[$k] = $this->{$k}->toArray(true);
+				}
+			}
+		}
+		return $temp;
 	}
 	public function __debugInfo() {
 		return $this->toArray();
@@ -166,18 +115,7 @@ class TableRow implements TableRowInterface, \JsonSerializable
 	public function jsonSerialize() {
 		return $this->toArray();
 	}
-	public function toArray($full = true) {
-		if($this->isNull()) {
-			return null;
-		}
-		$temp = array_merge($this->data, $this->chng);
-		if($full) {
-			foreach($this->inst as $k => $v) {
-				$temp[$k] = $this->{$k}()->toArray(true);
-			}
-		}
-		return $temp;
-	}
+
 	public function fromArray(array $data) {
 		foreach($data as $k => $v) {
 			$this->__set($k, $v);
@@ -187,15 +125,20 @@ class TableRow implements TableRowInterface, \JsonSerializable
 		if(in_array($key, $this->tbl->getColumns()) && (isset($this->chng[$key]) || !isset($this->data[$key]) || $this->data[$key] !== $value)) {
 			$this->chng[$key] = $value;
 		}
-	}
-	protected function isNull() {
-		return count($this->chng) + count($this->data) === 0;
-	}
-	public function save() {
-		if($this->isNull()) {
-			return null;
+		if(isset($this->inst[$key])) {
+			$temp = $this->{$k}();
+			if($temp) {
+				foreach($temp as $k => $v) {
+					unset($temp[$k]);
+				}
+				if($value !== null) {
+					$temp[] = $value;
+				}
+			}
 		}
+	}
 
+	public function save() {
 		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
 		if(!$wasInTransaction) {
 			$this->tbl->getDatabase()->begin();
@@ -213,65 +156,72 @@ class TableRow implements TableRowInterface, \JsonSerializable
 			foreach($this->inst as $k => $v) {
 				if(!$v['pivot'] && $v['foreign_key'] === $v['class']->getPrimaryKey()) {
 					// belongs relation, update own field
-					$tmp = $this->{$k}()->save();
-					if($tmp !== null) {
-						$this->chng[$v['local_key']] = $tmp;
+					foreach($this->{$k}()->save() as $id) {
+						$this->chng[$v['local_key']] = $id;
 					}
 				}
 			}
 
 			// own data
 			if(count($this->chng)) {
-				if($fk) {
-					$this->tbl->update($this->chng);
+				if($fk !== null) {
+					$col = [];
+					$par = [];
+					foreach($this->chng as $k => $v) {
+						if(in_array($k, $this->tbl->getColumns())) {
+							$col[] = $k. ' = ?';
+							$par[] = $v;
+						}
+					}
+					if(count($col)) {
+						$par[] = $fk;
+						$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
+					}
 				}
 				else {
-					$fk = $this->tbl->create($this->chng);
+					$temp = [];
+					foreach($this->chng as $k => $v) {
+						if(in_array($k, $this->tbl->getColumns())) {
+							$temp[$k] = $v;
+						}
+					}
+					if(!count($temp)) {
+						throw new ORMException('Nothing to insert');
+					}
+					$fk = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
 					$nw = true;
 				}
 			}
-
 			// has relations
 			if($fk) {
 				foreach($this->inst as $k => $v) {
 					if($v['pivot']) {
+						$temp = $this->{$k}()->save();
 						$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
-						foreach($this->{$k}() as $item) {
-							$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $item->save()]);
+						foreach($temp as $id) {
+							$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $id]);
 						}
 					}
 					else {
 						if($v['local_key'] === $id) {
 							// set the foreign key on all rows in the collection to $fk
-							if($v['many']) {
-								if($nw) {
-									$this->{$k}()->save();
-								}
-								else {
-									foreach($this->{$k}() as $kk => $item) {
-										$item->{$v['foreign_key']} = $fk;
-										$item->save();
-									}
-								}
-							}
-							else {
-								if(!$this->{$k}()->isNull()) {
-									$this->{$k}()->{$v['foreign_key']} = $fk;
-									$this->{$k}()->save();
-								}
-							}
+							$temp = [];
+							$temp[$v['foreign_key']] = $fk;
+							$this->{$k}()->save($temp);
 						}
 					}
 				}
 			}
-		} catch (DatabaseException $e) {
-			if($wasInTransaction) {
-				throw $e;
+			if(!$wasInTransaction) {
+				$this->tbl->getDatabase()->commit();
 			}
-			$this->tbl->getDatabase()->rollback();
+			return $fk;
+		} catch (DatabaseException $e) {
+			if(!$wasInTransaction) {
+				$this->tbl->getDatabase()->rollback();
+			}
+			throw $e;
 		}
-
-		return $fk;
 	}
 	public function delete() {
 		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
@@ -297,15 +247,16 @@ class TableRow implements TableRowInterface, \JsonSerializable
 				}
 			}
 			if($fk) {
-				$temp = [];
-				$temp[$this->tbl->getPrimaryKey()] = $fk;
-				$this->tbl->delete($temp);
+				$this->tbl->getDatabase()->query('DELETE FROM ' . $this->tbl->getTableName() . ' WHERE '.$this->tbl->getPrimaryKey().' = ?', [ $fk ]);
 			}
+			if(!$wasInTransaction) {
+				$this->tbl->getDatabase()->commit();
+			}
+			return $fk;
 		} catch (DatabaseException $e) {
-			if($wasInTransaction) {
-				throw $e;
+			if(!$wasInTransaction) {
+				$this->tbl->getDatabase()->rollback();
 			}
-			$this->tbl->getDatabase()->rollback();
 			throw $e;
 		}
 	}

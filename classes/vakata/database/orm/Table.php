@@ -5,41 +5,35 @@ use vakata\database\DatabaseInterface;
 
 class Table implements TableInterface
 {
-	protected $db = null;
-	protected $tb = null;
-	protected $pk = null;
-	protected $fd = [];
-	protected $rl = [];
-	protected $tx = [];
+	protected $db     = null;
+	protected $tb     = null;
+	protected $pk     = null;
+	protected $fd     = [];
+	protected $tx     = [];
+	protected $rl     = [];
+	protected $ext    = [];
+	protected $new    = [];
+	protected $del    = [];
+	protected $result = null;
+	protected $filter = ['1=1'];
+	protected $params = [];
+	protected $joined = [];
 
-	public function __construct(DatabaseInterface $db, $tb, $pk = null, array $fd = null, array $tx = null) {
+	public function __construct(DatabaseInterface $db, $tb, array $definition = null) {
 		$this->db = $db;
 		$this->tb = $tb;
 
-		if(!$pk || !$fd) {
-			$tmp = $this->getDefinition();
-			if(!$pk) {
-				$pk = $tmp['primary_key'];
-			}
-			if(!$fd) {
-				$fd = $tmp['columns'];
-			}
-			if(!$tx) {
-				$tx = $tmp['indexed'];
-			}
-			//$pk = $tmp['pk'] ? $tmp['pk'] : $pk;
-			//$fd = $tmp['fields'];
+		if (!$definition) {
+			$definition = $this->getDefinition();
 		}
+		$this->pk = $definition['primary_key'];
+		$this->fd = $definition['columns'];
+		$this->tx = $definition['indexed'];
 
-		$this->pk = $pk ? $pk : 'id';
-		$this->fd = count($fd) ? $fd : [$this->pk];
-		$this->tx = $tx ? $tx : [];
-		if(is_array($this->fd)) {
-			$this->fd[] = $this->pk;
-			$this->fd = array_unique($this->fd);
-		}
+		$this->reset();
 	}
 
+	// getters
 	public function getDefinition() {
 		$res = [ 'columns' => [], 'primary_key' => null, 'definitions' => [], 'indexed' => [] ];
 		switch($this->db->driver()) {
@@ -67,40 +61,9 @@ class Table implements TableInterface
 				}
 				break;
 			default:
-				throw new APIException('Driver is not supported: ' . $this->db->driver(), 500);
+				throw new ORMException('Driver is not supported: ' . $this->db->driver(), 500);
 		}
 		return $res;
-	}
-	public function hasOne($tb, $key = null, $field = null) {
-		return $this->addRelation($tb, $this->pk, $key ? $key : $this->tb . '_id', false, null, $field);
-	}
-	public function hasMany($tb, $key = null, $field = null) {
-		return $this->addRelation($tb, $this->pk, $key ? $key : $this->tb . '_id', true, null, $field);
-	}
-	public function belongsTo($tb, $key = null, $field = null) {
-		return $this->addRelation($tb, $key ? $key : $tb . '_id', null, false, null, $field);
-	}
-	public function manyToMany($tb, $pivot = null, $field = null) {
-		return $this->addRelation($tb, $this->tb . '_' . $this->pk, null, true, $pivot ? $pivot : $this->tb . '_' . $pivot, $field);
-	}
-	protected function addRelation($tb, $local_key, $foreign_key = null, $many = true, $pivot = null, $field = null) {
-		$temp = $tb instanceof Table ? $tb : new Table($this->db, $tb);
-		if(!$foreign_key) {
-			$foreign_key = ($pivot ? $temp->getTable() . '_' : '') . $temp->getPrimaryKey();
-		}
-		$this->rl[$field ? $field : $tb . '_' . $local_key] = [
-			'table'       => $temp,
-			'local_key'   => $local_key,
-			'foreign_key' => $foreign_key,
-			'many'        => $many,
-			'pivot'       => $pivot,
-			'field'       => $field ? $field : $tb . '_' . $local_key
-		];
-		return $this;
-	}
-
-	public function getTable() {
-		return $this;
 	}
 	public function getTableName() {
 		return $this->tb;
@@ -124,163 +87,400 @@ class Table implements TableInterface
 		return $this->db;
 	}
 
-	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false) {
-		if(is_array($filter)) {
-			$filter = array_merge([
-				'l' => null,
-				'p' => 0,
-				'o' => null,
-				'd' => 0,
-				'q' => ''
-			], $filter);
-			if(!isset($order) && isset($filter['o']) && in_array($filter['o'], $this->getColumns())) {
-				$order = $filter['o'];
+	// relations
+	public function hasOne($tb, $key = null, $field = null) {
+		return $this->addRelation($tb, $this->pk, $key ? $key : $this->tb . '_id', false, null, $field);
+	}
+	public function hasMany($tb, $key = null, $field = null) {
+		return $this->addRelation($tb, $this->pk, $key ? $key : $this->tb . '_id', true, null, $field);
+	}
+	public function belongsTo($tb, $key = null, $field = null) {
+		return $this->addRelation($tb, $key ? $key : $tb . '_id', null, false, null, $field);
+	}
+	public function manyToMany($tb, $pivot = null, $field = null) {
+		return $this->addRelation($tb, $this->tb . '_' . $this->pk, null, true, $pivot ? $pivot : $this->tb . '_' . $pivot, $field);
+	}
+	protected function addRelation($tb, $local_key, $foreign_key = null, $many = true, $pivot = null, $field = null) {
+		$temp = $tb instanceof Table ? $tb : new Table($this->db, $tb);
+		if(!$foreign_key) {
+			$foreign_key = ($pivot ? $temp->getTableName() . '_' : '') . $temp->getPrimaryKey();
+		}
+		$this->rl[$field ? $field : $tb . '_' . $local_key] = [
+			'table'       => $temp,
+			'local_key'   => $local_key,
+			'foreign_key' => $foreign_key,
+			'many'        => $many,
+			'pivot'       => $pivot,
+			'field'       => $field ? $field : $tb . '_' . $local_key
+		];
+		return $this;
+	}
+
+	// selection
+	public function search($term) {
+		if(count($this->tx) && is_string($term) && strlen($term) >= 4) {
+			$this->filter('MATCH ('.implode(', ', $this->tx).') AGAINST (?)', $term);
+		}
+		return $this;
+	}
+	public function filter($sql, array $params = []) {
+		$this->filter[] = '(' . $sql . ')';
+		$this->params = array_merge($this->params, array_values($params));
+		$this->result = null;
+		$this->ext = [];
+		return $this;
+	}
+	public function reset() {
+		$this->filter = ['1=1'];
+		$this->params = [];
+		$this->result = null;
+		$this->joined = [];
+		$this->ext = [];
+		return $this;
+	}
+
+	public function count() {
+		$sql = 'SELECT COUNT(DISTINCT t.' . $this->pk . ') FROM ' . $this->tb . ' AS t ';
+		foreach($this->joined as $k => $v) {
+			if($this->rl[$k]['pivot']) {
+				$sql .= 'LEFT JOIN ' . $this->rl[$k]['pivot'] . ' AS '.$k.'_pivot ON t.' . $this->pk . ' = ' . $k . '_pivot.' . $this->rl[$k]['local_key'] . ' ';
+				$sql .= 'LEFT JOIN ' . $this->rl[$k]['table']->getTableName() . ' AS '.$k.' ON ' . $k . '.' . $this->rl[$k]['table']->getPrimaryKey() . ' = ' . $k . '_pivot.' . $this->rl[$k]['foreign_key'] . ' ';
 			}
-			if(!isset($limit) && isset($filter['l']) && (int)$filter['l']) {
-				$limit = (int)$filter['l'];
+			else {
+				$sql .= $v . ' JOIN ' . $this->rl[$k]['table']->getTableName() . ' AS '.$k.' ON t.' . $this->rl[$k]['local_key'] . ' = ' . $k . '.' . $this->rl[$k]['foreign_key'] . ' ';
 			}
-			if(!isset($offset) && isset($limit) && isset($filter['p'])) {
-				$offset = (int)$filter['p'] * $limit;
-			}
-			if(isset($filter['d']) && isset($order) && strpos($order, 'ASC') === false && strpos($order, 'DESC') === false) {
-				$order .= (int)$filter['d'] ? ' DESC' : ' ASC';
-			}
-			$sql = [];
-			$par = [];
-			foreach($this->getColumns() as $column) {
-				if(isset($filter[$column])) {
-					if(!is_array($filter[$column])) {
-						$filter[$column] = [$filter[$column]];
+		}
+		$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
+		return $this->db->one($sql, $this->params);
+	}
+	public function select($order = null, $limit = 0, $offset = 0, array $fields = null) {
+		if($fields && count($fields)) {
+			$temp = [];
+			foreach($fields as $k => $v) {
+				if(!strpos($v, '.')) {
+					if(in_array($v, $this->fd) || $v === '*') {
+						$temp[] = 't.' . $v;
 					}
-					if(isset($filter[$column]['beg']) && isset($filter[$column]['end'])) {
-						$sql[] = ' ' . $column . ' BETWEEN ? AND ? ';
-						$par[] = $filter[$column]['beg'];
-						$par[] = $filter[$column]['end'];
-						continue;
-					}
-					if(count($filter[$column])) {
-						$sql[] = ' ' . $column . ' IN ('.implode(',', array_fill(0, count($filter[$column]), '?')).') ';
-						$par = array_merge($par, $filter[$column]);
-						continue;
+				}
+				else {
+					if(preg_match('(^[a-z_0-9]+\.[a-z_0-9*]+$)i', $v)) {
+						$v = explode('.', $v, 2);
+						if(isset($this->rl[$v[0]]) && ($v[1] === '*' || in_array($v[1], $this->rl[$v[0]]['table']->getColumns()))) {
+							$this->joined[$v[0]] = 'LEFT';
+							$temp[] = implode('.', $v);
+						}
 					}
 				}
 			}
-			$indexed = $this->getIndexed();
-			if(isset($filter['q']) && strlen($filter['q']) && count($indexed)) {
-				$sql[] = ' MATCH ('.implode(',', $indexed).') AGAINST (?) ';
-				$par[] = $filter['q'];
+			$fields = $temp;
+		}
+		if(!$fields || !count($fields)) {
+			$fields = ['t.*'];
+		}
+		$sql = 'SELECT ' . implode(', ', $fields). ' FROM ' . $this->tb . ' AS t ';
+		foreach($this->joined as $k => $v) {
+			if($this->rl[$k]['pivot']) {
+				$sql .= 'LEFT JOIN ' . $this->rl[$k]['pivot'] . ' AS '.$k.'_pivot ON t.' . $this->pk . ' = ' . $k . '_pivot.' . $this->rl[$k]['local_key'] . ' ';
+				$sql .= 'LEFT JOIN ' . $this->rl[$k]['table']->getTableName() . ' AS '.$k.' ON ' . $k . '.' . $this->rl[$k]['table']->getPrimaryKey() . ' = ' . $k . '_pivot.' . $this->rl[$k]['foreign_key'] . ' ';
 			}
-			$filter = !count($sql) ? null : implode(' AND ', $sql);
-			$params = !count($par) ? null : $par;
+			else {
+				$sql .= $v . ' JOIN ' . $this->rl[$k]['table']->getTableName() . ' AS '.$k.' ON t.' . $this->rl[$k]['local_key'] . ' = ' . $k . '.' . $this->rl[$k]['foreign_key'] . ' ';
+			}
 		}
-		if(!$filter) {
-			$filter = '1 = 1';
+		$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
+		if(count($this->joined)) {
+			$sql .= 'GROUP BY t.' . $this->pk . ' ';
 		}
-		if(is_int($filter)) {
-			$params = $filter;
-			$filter = $this->pk . ' = ?';
-			$is_single = true;
+		if($order) {
+			$sql .= 'ORDER BY ' . $order . ' ';
 		}
-		$temp = new TableRows(
-			$this->db->get('SELECT ' . implode(', ', $this->fd) . ' FROM ' . $this->tb . ' WHERE ' . $filter . ( $order ? ' ORDER BY ' . $order . ' ' : '') . ( (int)$limit ? ' LIMIT ' . (int)$limit : '') . ( (int)$offset ? ' OFFSET ' . (int)$offset : ''), $params),
-			$this
-		);
-		$temp = $is_single ? (isset($temp[0]) ? $temp[0] : null) : $temp;
-		return $temp;
-	}
+		if((int)$limit) {
+			$sql .= 'LIMIT ' . (int)$limit . ' ';
+		}
+		if((int)$limit && (int)$offset) {
+			$sql .= 'OFFSET ' . (int)$offset;
+		}
 
-	public function create(array $data) {
-		$temp = [];
-		foreach($data as $k => $v) {
-			if(in_array($k, $this->fd)) {
-				$temp[$k] = $v;
-			}
-		}
-		if(!count($temp)) {
-			throw new ORMException('Nothing to insert');
-		}
-		return $this->getDatabase()->query('INSERT INTO ' . $this->tb . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
-	}
-	public function update(array $data) {
-		if(!isset($data[$this->getPrimaryKey()])) {
-			throw new ORMException('Can not update without primary key');
-		}
-		$col = [];
-		$par = [];
-		foreach($data as $k => $v) {
-			if(in_array($k, $this->fd)) {
-				$col[] = $k. ' = ?';
-				$par[] = $v;
-			}
-		}
-		if(count($col)) {
-			$par[] = $data[$this->getPrimaryKey()];
-			$this->getDatabase()->query('UPDATE ' . $this->tb . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
-		}
-		return $data[$this->getPrimaryKey()];
-	}
-	public function delete(array $data) {
-		if(!isset($data[$this->getPrimaryKey()])) {
-			throw new ORMException('Can not update without primary key');
-		}
-		$this->getDatabase()->query('DELETE FROM ' . $this->tb . ' WHERE id = ?', [$data[$this->getPrimaryKey()]]);
-		return $data[$this->getPrimaryKey()];
-	}
-
-	/*
-	public function filter($sql, array $par = []) {
-		if(is_int($sql) || is_numeric($sql)) {
-			$par = [ (int)$sql ];
-			$sql = ' id = ? ';
-		}
-		$this->whe = $sql;
-		$this->par = $par;
+		$this->result = $this->db->get($sql, $this->params);
+		$this->ext = [];
 		return $this;
 	}
-	public function cnt() {
-		return $this->whe !== null ? $this->db->one('SELECT COUNT(*) AS cnt FROM ' . $this->tb . ' WHERE ' . $this->whe, $this->par) : 0;
-	}
+	// mass changes
+	// public function update(array $data, $order = null, $limit = 0) {
+	// 	$fields = [];
+	// 	$params = [];
+	// 	foreach($data as $k => $v) {
+	// 		// TODO: make sure fields are valid
+	// 		$fields[] = $k . ' = ? ';
+	// 		$params[] = $v;
+	// 	}
+	// 	if(!count($fields)) {
+	// 		throw new ORMException('Nothing to update');
+	// 	}
+	// 	return $this->db->query('' .
+	// 		'UPDATE ' . $this->tb . ' SET ' . implode(', ', $fields) . ' ' .
+	// 		'WHERE ' . implode(' AND ', $this->filter) . ' ' .
+	// 		($order ? 'ORDER BY ' . $order : '') . ' ' .
+	// 		((int)$limit ? 'LIMIT ' . (int)$limit : ''),
+	// 	array_merge($params, $this->params))->affected();
+	// }
+	// public function delete($order = null, $limit = 0) {
+	// 	return $this->db->query('' .
+	// 		'DELETE FROM ' . $this->tb . ' ' .
+	// 		'WHERE ' . implode(' AND ', $this->filter) . ' ' .
+	// 		($order ? 'ORDER BY ' . $order : '') . ' ' .
+	// 		((int)$limit ? 'LIMIT ' . (int)$limit : ''),
+	// 	$this->params)->affected();
+	// }
 
-
-	public function all($order = null, $limit = null, $offset = null, $full = true) {
-		return $this->get($order, $limit, $offset)->toArray($full);
-	}
-	public function one($id = null, $order = null, $offset = null) {
-		if($id) {
-			$this->filter((int)$id);
+	public function read($settings = null) {
+		//$this->all();
+		if(isset($settings) && is_numeric($settings)) {
+			return $this->filter($this->pk . ' = ' . (int)$settings)->select();
 		}
-		$temp = $this->get($order, 1, $offset);
-		return isset($temp[0]) ? $temp[0] : null;
-	}
-
-	public function insert(array $data) {
-		$par = [];
-		$fld = [];
-		foreach($data as $k => $v) {
-			if(in_array($k, $this->fd)) {
-				$par[] = $v;
-				$fld[] = $k;
+		$settings = array_merge([
+			'l' => null,
+			'p' => 0,
+			'o' => null,
+			'd' => 0,
+			'q' => '',
+			'f' => '*'
+		], isset($settings) && is_array($settings) ? $settings : []);
+		$fields = is_array($settings['f']) ? $settings['f'] : [ $settings['f'] ];
+		$order = null;
+		$limit = 0;
+		$offset = 0;
+		if(isset($settings['o'])) {
+			if(in_array($settings['o'], $this->fd)) {
+				$order = $settings['o'] . ' ' . (isset($settings['d']) && (int)$settings['d'] ? 'DESC' : 'ASC');
+			}
+			if(strpos('.', $settings['o'])) {
+				$temp = explode('.', $settings['o'], 2);
+				if(isset($this->rl[$temp[0]]) && in_array($temp[1], $this->rl[$temp[0]]['table']->getColumns())) {
+					$this->joined[$temp[0]] = 'LEFT';
+					$order = $settings['o'] . ' ' . (isset($settings['d']) && (int)$settings['d'] ? 'DESC' : 'ASC');
+				}
 			}
 		}
-		return $this->db->query('INSERT INTO ' . $this->tb . ' (' . implode(', ', $k) . ') VALUES (' . implode(',', array_fill(0, count($par), '?')) . ')', $par)->insertId();
-	}
-	public function update(array $data) {
-		$par = [];
-		$fld = [];
-		foreach($data as $k => $v) {
-			if(in_array($k, $this->fd)) {
-				$par[] = $v;
-				$fld[] = $k . ' = ? ';
+		if(isset($settings['l']) && (int)$settings['l']) {
+			$limit = (int)$settings['l'];
+			if(isset($settings['p'])) {
+				$offset = (int)$settings['p'] * $limit;
 			}
 		}
-		return $this->db->query('UPDATE ' . $this->tb . ' SET ' . implode(', ', $fld) . ' WHERE ' . $this->whe, array_merge($par, $this->par))->affected();
+		if(isset($settings['q'])) {
+			$this->search($settings['q']);
+		}
+		// filter on local columns
+		foreach($this->fd as $column) {
+			if(isset($settings[$column])) {
+				if(!is_array($settings[$column])) {
+					$this->filter($column . ' = ?', [$settings[$column]]);
+					continue;
+				}
+				if(isset($settings[$column]['beg']) && isset($settings[$column]['end'])) {
+					$this->filter($column . ' BETWEEN ? AND ?', [ $settings[$column]['beg'], $settings[$column]['end'] ]);
+					continue;
+				}
+				if(count($settings[$column])) {
+					$this->filter($column . ' IN ('.implode(',', array_fill(0, count($settings[$column]), '?')).')', $settings['column']);
+					continue;
+				}
+			}
+		}
+		// filter on remote columns
+		foreach($settings as $column => $filter) {
+			if(!strpos($column, '.') || !preg_match('(^[a-z_0-9]+\.[a-z_0-9]+$)i', $column)) {
+				continue;
+			}
+
+			$temp = explode('.', $column, 2);
+			if(isset($this->rl[$temp[0]]) && in_array($temp[1], $this->rl[$temp[0]]['table']->getColumns())) {
+				$this->joined[$temp[0]] = 'INNER';
+				if(!is_array($settings[$column])) {
+					$this->filter($column . ' = ?', [$settings[$column]]);
+					continue;
+				}
+				if(isset($settings[$column]['beg']) && isset($settings[$column]['end'])) {
+					$this->filter($column . ' BETWEEN ? AND ?', [ $settings[$column]['beg'], $settings[$column]['end'] ]);
+					continue;
+				}
+				if(count($settings[$column])) {
+					$this->filter($column . ' IN ('.implode(',', array_fill(0, count($settings[$column]), '?')).')', $settings['column']);
+					continue;
+				}
+			}
+		}
+		return $this->select($order, $limit, $offset, $fields);
+	}
+	// creation
+	public function create(array $data) {
+		$temp = new TableRow(clone $this);
+		$temp->fromArray($data);
+		return $this->new[] = $temp;
+	}
+
+	// row processing
+	protected function extend($key, array $data = null) {
+		if(isset($this->ext[$key])) {
+			return $this->ext[$key];
+		}
+		if($data === null) {
+			return null;
+		}
+		return $this->ext[$key] = new TableRow($this, $data);
+	}
+
+	// array stuff - collection handling
+	public function offsetGet($offset) {
+		if($this->result === null) {
+			$this->select();
+		}
+		return $this->result->offsetExists($offset) ? $this->extend($offset, $this->result->offsetGet($offset)) : null;
+	}
+	public function offsetSet($offset, $value) {
+		if($offset === null) {
+			if(is_array($value)) {
+				$this->create($value);
+				return ;
+			}
+			if($value instanceof TableRow) {
+				return $this->new[] = $value;
+			}
+			throw new ORMException('Invalid input to offsetSet');
+		}
+		if($this->result === null) {
+			$this->select();
+		}
+		if(!$this->offsetExists($offset)) {
+			throw new ORMException('Invalid offset used with offsetSet', 404);
+		}
+		$temp = $this->offsetGet($offset);
+		if(is_array($value)) {
+			return $temp->fromArray($value);
+		}
+		if($value instanceof TableRow) {
+			$this->del[] = $temp;
+			$this->new[] = $value;
+		}
+		throw new ORMException('Invalid input to offsetSet');
+	}
+	public function offsetExists($offset) {
+		if($this->result === null) {
+			$this->select();
+		}
+		return $this->result->offsetExists($offset);
+	}
+	public function offsetUnset($offset) {
+		if($this->result === null) {
+			$this->select();
+		}
+		if(!$this->offsetExists($offset)) {
+			throw new ORMException('Invalid offset used with offsetUnset', 404);
+		}
+		$temp = $this->offsetGet($offset);
+		if(!$temp) {
+			throw new ORMException('Invalid offset used with offsetUnset', 404);
+		}
+		$this->del[] = $temp;
+	}
+	public function current() {
+		if($this->result === null) {
+			$this->select();
+		}
+		return $this->extend($this->result->key(), $this->result->current());
+	}
+	public function key() {
+		if($this->result === null) {
+			$this->select();
+		}
+		return $this->result->key();
+	}
+	public function next() {
+		if($this->result === null) {
+			$this->select();
+		}
+		$this->result->next();
+	}
+	public function rewind() {
+		if($this->result === null) {
+			$this->select();
+		}
+		$this->result->rewind();
+	}
+	public function valid() {
+		if($this->result === null) {
+			$this->select();
+		}
+		return $this->result->valid();
+	}
+
+	// helpers
+	public function toArray($full = true) {
+		$temp = [];
+		foreach($this as $k => $v) {
+			$temp[$k] = $v->toArray($full);
+		}
+		return $temp;
+	}
+	public function __debugInfo() {
+		return $this->toArray();
+	}
+	public function jsonSerialize() {
+		return $this->toArray();
+	}
+
+	// modifiers
+	public function save(array $data = []) {
+		$wasInTransaction = $this->db->isTransaction();
+		if(!$wasInTransaction) {
+			$this->db->begin();
+		}
+		try {
+			$ret = [];
+			foreach($this->new as $temp) {
+				foreach($data as $k => $v) {
+					$temp->{$k} = $v;
+				}
+				$ret[$temp->save()] = true;
+			}
+			foreach($this as $temp) {
+				foreach($data as $k => $v) {
+					$temp->{$k} = $v;
+				}
+				$ret[$temp->save()] = true;
+			}
+			foreach($this->del as $temp) {
+				unset($ret[$temp->delete()]);
+			}
+			if(!$wasInTransaction) {
+				$this->db->commit();
+			}
+			return array_keys($ret);
+		} catch (DatabaseException $e) {
+			if(!$wasInTransaction) {
+				$this->db->rollback();
+			}
+			throw $e;
+		}
 	}
 	public function delete() {
-		return $this->db->query('DELETE FROM ' . $this->tb . ' WHERE ' . $this->whe, $this->par)->affected();
+		$wasInTransaction = $this->db->isTransaction();
+		if(!$wasInTransaction) {
+			$this->db->begin();
+		}
+		try {
+			foreach($this as $temp) {
+				$temp->delete();
+			}
+			if(!$wasInTransaction) {
+				$this->db->commit();
+			}
+		} catch (DatabaseException $e) {
+			if(!$wasInTransaction) {
+				$this->db->rollback();
+			}
+			throw $e;
+		}
 	}
-
-	public function jsonSerialize() {
-		return $this->getRows()->toArray(true);
-	}
-	*/
 }

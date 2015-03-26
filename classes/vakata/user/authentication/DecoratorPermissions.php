@@ -25,7 +25,7 @@ class DecoratorPermissions implements AuthenticationInterface
 					$temp['permissions'] = array_merge($perm, $temp['permissions']);
 				}
 			}
-			$temp['permissions'] = array_unique(array_filter(array_map('strtolower',$temp['permissions'])));
+			$temp['permission'] = $temp['permissions'] = array_unique(array_filter(array_map('strtolower',$temp['permissions'])));
 		}
 		return $temp;
 	}

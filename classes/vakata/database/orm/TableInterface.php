@@ -3,9 +3,8 @@ namespace vakata\database\orm;
 
 use vakata\database\DatabaseInterface;
 
-interface TableInterface
+interface TableInterface extends \Iterator, \ArrayAccess, \JsonSerializable
 {
-	public function getTable();
 	public function getTableName();
 	public function getColumns();
 	public function getIndexed();
@@ -21,19 +20,15 @@ interface TableInterface
 	public function belongsTo($tb, $key = null, $field = null);
 	public function manyToMany($tb, $pivot = null, $field = null);
 
-	public function read($filter = null, $params = null, $order = null, $limit = null, $offset = null, $is_single = false);
-	public function create(array $data);
-	public function update(array $data);
-	public function delete(array $data);
+	public function search($term);
+	public function filter($sql, array $params = []);
+	public function reset();
+	public function select($order = null, $limit = 0, $offset = 0, array $fields = null);
+	public function read($settings = null);
+	public function count();
 
-	/*
-	public function filter($sql, array $par = []);
-	public function cnt();
-	public function get($order = null, $limit = null, $offset = null);
-	public function all($order = null, $limit = null, $offset = null);
-	public function one($id = null, $order = null, $offset = null);
-	public function insert(array $data);
-	public function update(array $data);
+	public function toArray($full = true);
+
+	public function save(array $data = []);
 	public function delete();
-	*/
 }

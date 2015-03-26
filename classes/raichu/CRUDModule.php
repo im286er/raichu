@@ -194,7 +194,7 @@ class CRUDModule extends Table implements PermissionsInterface
 					case 'author':
 					case 'editor':
 						$w[] = $field;
-						$data[$field] = \raichu\Raichu::user()->id;
+						$data[$field] = \vakata\raichu\Raichu::user()->id;
 				}
 			}
 			if(is_array($data[$field]) || is_object($data[$field])) {
@@ -255,7 +255,7 @@ class CRUDModule extends Table implements PermissionsInterface
 						break;
 					case 'editor':
 						$w[] = $field;
-						$data[$field] = \raichu\Raichu::user()->id;
+						$data[$field] = \vakata\raichu\Raichu::user()->id;
 				}
 			}
 			if(is_array($data[$field]) || is_object($data[$field])) {
