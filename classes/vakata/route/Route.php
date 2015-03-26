@@ -13,7 +13,7 @@ class Route
 	protected function compile($url, $full = true) {
 		$url = array_filter(explode('/',trim($url, '/')), function ($v) { return $v !== ''; });
 		if(!count($url)) {
-			return '(^/+$)ui';
+			return $full ? '(^/+$)ui' : '(^/+)ui';
 		}
 		$url = '(^/' . implode('', array_map([$this, 'compileSegment'], $url)) . ($full ? '$' : '') .')';
 		if(@preg_match($url, '') === false) {
@@ -214,7 +214,6 @@ class Route
 			$res->removeHeaders();
 			$res->setBody(null);
 			// while(ob_get_level()) { ob_end_clean(); }
-
 			if(isset($this->err)) {
 				return $this->invoke($this->err, $arg, $req, $res, $url, $e);
 			}
