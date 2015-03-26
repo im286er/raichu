@@ -3,7 +3,7 @@ namespace vakata\view;
 
 class View
 {
-	protected static $vdir = '';
+	protected static $dirs = [];
 	protected static $vars = [];
 
 	protected $file = null;
@@ -14,18 +14,26 @@ class View
 		$this->data = $data;
 	}
 
-	public function add($name, $value) {
-		$this->data[$name] = $value;
+	public function add($name, $value = null) {
+		if(is_array($name) && $value === null) {
+			$this->data = array_merge($this->data, $name);
+		}
+		else {
+			$this->data[$name] = $value;
+		}
 		return $this;
 	}
-	public function render(array $data = []) {
+	public function render($master = null, array $masterData = []) {
 		extract(static::$vars);
 		extract($this->data);
-		extract($data);
 		try {
 			ob_start();
 			include $this->file;
-			return ob_get_clean();
+			$data = ob_get_clean();
+			if($master) {
+				$data = (new self($master, $masterData))->add('data', $data)->render();
+			}
+			return $data;
 		}
 		catch(\Exception $e) {
 			ob_get_clean();
@@ -33,14 +41,22 @@ class View
 		}
 	}
 
-	public static function get($file, $data = null) {
+	public static function get($file, array $data = []) {
 		return (new self($file, $data))->render();
 	}
-	public static function share($var, $value) {
-		static::$vars[$var] = $value;
+	public static function share($var, $value = null) {
+		if(is_array($var) && $value === null) {
+			static::$vars = array_merge(static::$vars, $var);
+		}
+		else {
+			static::$vars[$var] = $value;
+		}
 	}
 	public static function dir($dir) {
-		static::$vdir = realpath($dir);
+		if(!realpath($dir)) {
+			throw new ViewException('Invalid dir');
+		}
+		static::$dirs[] = realpath($dir);
 	}
 	public static function exists($file) {
 		try {
@@ -53,15 +69,17 @@ class View
 	}
 	
 	protected static function normalize($view) {
-		if(static::$vdir) {
+		if(static::$dirs) {
 			$view = static::$vdir . DIRECTORY_SEPARATOR . $view;
 		}
 		if(!preg_match('(\.php$)i',$view)) {
 			$view .= '.php';
 		}
-		if(!is_file($view) || !is_readable($view)) {
-			throw new ViewException('View not found', 404);
+		foreach(static::$dirs as $dir) {
+			if(is_file($dir . DIRECTORY_SEPARATOR . $view) && is_readable($dir . DIRECTORY_SEPARATOR . $view)) {
+				return $view;
+			}
 		}
-		return $view;
+		throw new ViewException('View not found', 404);
 	}
 }
