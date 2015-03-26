@@ -1,8 +1,6 @@
 <?php
 namespace vakata\database\orm;
 
-use vakata\database\DatabaseInterface;
-
 interface TableInterface extends \Iterator, \ArrayAccess, \JsonSerializable
 {
 	public function getTableName();
