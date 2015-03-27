@@ -1,6 +1,10 @@
 <?php
-define('DEBUG',   true);
-define('LOGROOT', __DIR__);
+if(!defined('DEBUG')) {
+	define('DEBUG', true);
+}
+if(!defined('LOGROOT')) {
+	define('LOGROOT', __DIR__);
+}
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'bootstrap.php';
 
