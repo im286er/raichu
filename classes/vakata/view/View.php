@@ -57,10 +57,11 @@ class View
 			throw new ViewException('Invalid dir');
 		}
 		static::$dirs[] = realpath($dir);
+		static::$dirs = array_unique(array_filter(static::$dirs));
 	}
 	public static function exists($file) {
 		try {
-			static::normalize($view);
+			static::normalize($file);
 			return true;
 		}
 		catch(ViewException $e) {

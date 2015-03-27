@@ -238,9 +238,8 @@ class TableRow implements TableRowInterface
 				}
 				else {
 					if($v['local_key'] === $id) {
-						// set the foreign key on all rows in the collection to $fk
-						foreach($this->{$v['field']}() as $k => $item) {
-							unset($this->{$v['field']}()[$k]);
+						foreach($this->{$k}() as $kk => $item) {
+							//unset($this->{$k}()[$kk]);
 							$item->delete();
 						}
 					}
