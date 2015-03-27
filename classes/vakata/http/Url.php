@@ -14,7 +14,7 @@ class Url implements UrlInterface
 	public function __construct() {
 		$temp = [];
 
-		$this->appr	= defined('APPROOT') ? APPROOT : getcwd();
+		$this->appr	= defined('APPROOT') ? APPROOT : dirname($_SERVER['SCRIPT_NAME']); // getcwd()
 		$this->webr	= preg_replace('@/+@','/','/'.str_replace('\\',"/",str_replace(str_replace(array('\\','/'), DIRECTORY_SEPARATOR, trim($_SERVER['DOCUMENT_ROOT'],'/\\')), '', $this->appr)).'/');
 		$this->reqt	= htmlentities(trim(preg_replace(array('(^'.preg_quote($this->webr).')ui','(\?'.preg_quote($_SERVER['QUERY_STRING']).'$)ui'),'',$_SERVER['REQUEST_URI']),'/'));
 		$this->serv	= 'http' . ( !empty($_SERVER['HTTPS']) ? 's' : '' ) . '://' . htmlentities($_SERVER['SERVER_NAME']);
