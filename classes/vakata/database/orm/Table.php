@@ -119,7 +119,7 @@ class Table implements TableInterface
 	// selection
 	public function search($term) {
 		if(count($this->tx) && is_string($term) && strlen($term) >= 4) {
-			$this->filter('MATCH ('.implode(', ', $this->tx).') AGAINST (?)', $term);
+			$this->filter('MATCH ('.implode(', ', $this->tx).') AGAINST (?)', [$term]);
 		}
 		return $this;
 	}
@@ -201,7 +201,7 @@ class Table implements TableInterface
 			$sql .= 'OFFSET ' . (int)$offset;
 		}
 
-		$this->result = $this->db->get($sql, $this->params);
+		$this->result = $this->db->get($sql, $this->params, null, false, 'assoc', false);
 		$this->ext = [];
 		return $this;
 	}
