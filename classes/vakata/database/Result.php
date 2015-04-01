@@ -116,7 +116,9 @@ class Result implements ResultInterface, \JsonSerializable
 			return isset($this->all[$offset]);
 		}
 		if($this->fake === null && $this->rslt->seekable()) {
-			return $this->rslt->seek(($this->real_key = $offset));
+			$this->rslt->seek(($this->real_key = $offset));
+			$this->rslt->nextr();
+			return $this->rslt->row() !== false && $this->rslt->row() !== null;
 		}
 		$this->get();
 		return isset($this->all[$offset]);
