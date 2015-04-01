@@ -167,7 +167,8 @@ class Table implements TableInterface
 						$v = explode('.', $v, 2);
 						if(isset($this->rl[$v[0]]) && ($v[1] === '*' || in_array($v[1], $this->rl[$v[0]]['table']->getColumns()))) {
 							$this->joined[$v[0]] = 'LEFT';
-							$temp[] = implode('.', $v);
+							$temp[] = $v[1] === '*' ? implode('.', $v) : implode('.', $v) . ' AS ' . implode('__', $v);
+							$temp[] = 't.' . $this->rl[$v[0]]['local_key'];
 						}
 					}
 				}
@@ -200,7 +201,6 @@ class Table implements TableInterface
 		if((int)$limit && (int)$offset) {
 			$sql .= 'OFFSET ' . (int)$offset;
 		}
-
 		$this->result = $this->db->get($sql, $this->params, null, false, 'assoc', false);
 		$this->ext = [];
 		return $this;
@@ -254,7 +254,7 @@ class Table implements TableInterface
 			if(in_array($settings['o'], $this->fd)) {
 				$order = $settings['o'] . ' ' . (isset($settings['d']) && (int)$settings['d'] ? 'DESC' : 'ASC');
 			}
-			if(strpos('.', $settings['o'])) {
+			if(strpos($settings['o'], '.')) {
 				$temp = explode('.', $settings['o'], 2);
 				if(isset($this->rl[$temp[0]]) && in_array($temp[1], $this->rl[$temp[0]]['table']->getColumns())) {
 					$this->joined[$temp[0]] = 'LEFT';
