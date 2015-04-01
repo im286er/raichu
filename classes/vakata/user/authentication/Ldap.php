@@ -27,17 +27,18 @@ class Ldap extends AbstractAuthentication
 
 		$data = @ldap_search($ldap, 'DC=' . implode(',DC=', explode('.', $this->domain)), '(&(objectclass=person)(userprincipalname='.$username.'))');
 		$data = @ldap_first_entry($ldap, $data);
+		if(!$data) {
+			throw new UserException('Грешно потребителско име.');
+		}
 		$temp = [];
-		if($data) {
-			$data = @ldap_get_attributes($ldap, $data);
-			foreach($data as $k => $v) {
-				if($v && isset($v['count']) && $v['count'] === 1) {
-					$temp[$k] = $v[0];
-				}
+		$data = @ldap_get_attributes($ldap, $data);
+		foreach($data as $k => $v) {
+			if($v && isset($v['count']) && $v['count'] === 1) {
+				$temp[$k] = $v[0];
 			}
 		}
 		$temp['id'] = $username;
-		$temp['name'] = $temp['displayName'];
+		$temp['name'] = isset($temp['displayName']) ? $temp['displayName'] : '';
 
 		@ldap_unbind($ldap);
 		return $temp;
