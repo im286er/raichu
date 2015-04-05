@@ -136,7 +136,7 @@ class Raichu
 		}
 		if(isset($settings['uploads']) && $settings['uploads'] && isset($settings['uploads']['database'])) {
 			static::$repl['file'] = '\\vakata\\file\\FileDatabase';
-			static::$args['\\vakata\\file\\FileDatabase'] = [$settings['uploads']['database']];
+			static::$args['\\vakata\\file\\FileDatabase'] = [$settings['uploads']['directory'],$settings['uploads']['database']];
 			static::$repl['upload'] = static::$repl['\\vakata\\cache\\UploadInterface'] = '\\vakata\\upload\\UploadDatabase';
 			static::$args['\\vakata\\upload\\UploadDatabase'] = [$settings['uploads']['directory'],$settings['uploads']['database']];
 		}

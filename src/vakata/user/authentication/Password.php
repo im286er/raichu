@@ -16,7 +16,7 @@ namespace vakata\user\authentication {
 			$this->tb = $tb;
 			$this->settings = array_merge([
 				'forgot_password'	=> 1800,
-				'force_changepass'	=> 2592000,		// 30 дни
+				'force_changepass'	=> 0, // никога 2592000 // 30 дни
 				'error_timeout'		=> 30,
 				'error_timeout_cnt'	=> 3,
 				'max_errors'		=> 10,

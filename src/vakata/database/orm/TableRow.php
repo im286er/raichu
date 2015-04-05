@@ -7,6 +7,7 @@ class TableRow implements TableRowInterface
 {
 	protected $tbl  = null;
 	protected $data = [];
+	protected $xtra = [];
 	protected $inst = [];
 	protected $chng = [];
 	protected $cche = [];
@@ -16,6 +17,11 @@ class TableRow implements TableRowInterface
 		foreach($this->tbl->getColumns() as $column) {
 			if(isset($data[$column])) {
 				$this->data[$column] = $data[$column];
+			}
+		}
+		foreach($data as $k => $v) {
+			if(!isset($this->data[$k])) {
+				$this->data[str_replace('___', '.', $k)] = $v;
 			}
 		}
 		foreach($this->tbl->getRelations() as $rl) {
@@ -98,8 +104,11 @@ class TableRow implements TableRowInterface
 			$tbl->filter('1 = 0')->read();
 	}
 
-	public function toArray($full = true) {
+	public function toArray($full = true, $xtra = true) {
 		$temp = array_merge($this->data, $this->chng);
+		if($xtra) {
+			$temp = array_merge($temp, $this->xtra);
+		}
 		if($full) {
 			foreach($this->inst as $k => $v) {
 				if($this->{$k}) {

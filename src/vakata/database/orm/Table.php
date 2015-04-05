@@ -167,8 +167,8 @@ class Table implements TableInterface
 						$v = explode('.', $v, 2);
 						if(isset($this->rl[$v[0]]) && ($v[1] === '*' || in_array($v[1], $this->rl[$v[0]]['table']->getColumns()))) {
 							$this->joined[$v[0]] = 'LEFT';
-							$temp[] = $v[1] === '*' ? implode('.', $v) : implode('.', $v) . ' AS ' . implode('__', $v);
-							$temp[] = 't.' . $this->rl[$v[0]]['local_key'];
+							$temp[] = $v[1] === '*' ? implode('.', $v) : implode('.', $v) . ' AS ' . implode('___', $v);
+							//$temp[] = 't.' . $this->rl[$v[0]]['local_key'];
 						}
 					}
 				}
@@ -416,10 +416,10 @@ class Table implements TableInterface
 	}
 
 	// helpers
-	public function toArray($full = true) {
+	public function toArray($full = true, $xtra = true) {
 		$temp = [];
 		foreach($this as $k => $v) {
-			$temp[$k] = $v->toArray($full);
+			$temp[$k] = $v->toArray($full, $xtra);
 		}
 		return $temp;
 	}

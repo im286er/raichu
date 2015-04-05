@@ -29,7 +29,7 @@ class Request implements RequestInterface
 			$this->head[$this->cleanHeaderName($key)] = $value;
 		}
 		$temp = [];
-		$this->extn = preg_match('(\.([a-z0-9]{2,4})$)i', $_SERVER['REQUEST_URI'], $temp) ? $temp[1] : '';
+		$this->extn = preg_match('(\.([a-z0-9]{2,4})$)i', explode('?',$_SERVER['REQUEST_URI'])[0], $temp) ? $temp[1] : '';
 	}
 	protected function cleanHeaderName($name) {
 		if(strncmp($name, 'HTTP_', 5) === 0) {

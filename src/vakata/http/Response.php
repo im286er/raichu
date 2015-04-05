@@ -130,6 +130,109 @@ class Response implements ResponseInterface
 		}
 	}
 
+	public function file(\vakata\file\FileInterface $file, $file_name = null, $chunks = false) {
+		$extension = $file_name ? substr($file_name, strrpos($file_name, ".") + 1) : $file->extension;
+		$file_name = $file_name ? : $file->name;
+		$location = $file->location;
+		$file_beg = 0;
+		$file_end = $file->size ? $file->size : null;
+
+		$this->setGzip(false);
+		$this->body = null;
+		$this->head = [];
+
+		$expires = 60*60*24*30; // 1 месец
+		if($file->modified) {
+			$this->setHeader('Last-Modified', gmdate("D, d M Y H:i:s", $file->modified) . ' GMT');
+		}
+		if($file->hash) {
+			$this->setHeader('Etag', $file->hash);
+		}
+		$this->setHeader('Pragma','public');
+		$this->setHeader('Cache-Control','maxage='.$expires);
+		$this->setHeader('Expires', gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT');
+
+		// ако клиента има кеширано копие пускаме 304 и не качваме брояча за downloaded
+		if(
+			($file->modified && isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) == $file->modified) ||
+			($file->hash && isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim($_SERVER['HTTP_IF_NONE_MATCH']) == $file->hash)
+		) {
+			$this->setStatusCode(304);
+		}
+		// ако получаваме заявка за чънкове (resume/chunk поддръжка чрез HTTP_RANGE) 
+		// но само ако имаме размера
+		if($chunks && $file->size && isset($_SERVER['HTTP_RANGE'])) {
+			$this->setHeader('Accept-Ranges', 'bytes');
+			if(!preg_match('@^bytes=\d*-\d*(,\d*-\d*)*$@', $_SERVER['HTTP_RANGE'])) {
+				$this->setStatusCode(416);
+				$this->setHeader('Content-Range','bytes */' . $file->size);
+				$location = null;
+			}
+			else {
+				$range = current(explode(',', substr($_SERVER['HTTP_RANGE'], 6)));
+				list($seek_beg, $seek_end) = explode('-', $range, 2);
+				$seek_beg = max((int)$seek_beg, 0);
+				$seek_end = !(int)$seek_end ? ((int)$file->size - 1) : min((int)$seek_end, ((int)$file->size - 1));
+				if ($seek_beg > $seek_end) {
+					$this->setStatusCode(416);
+					$this->setHeader('Content-Range', 'bytes */' . $file->size);
+					$location = null;
+				}
+				else {
+					$this->setStatusCode(206);
+					$this->setHeader('Content-Range', 'bytes '.$seek_beg.'-'.$seek_end.'/'.$file->size);
+					$file_beg = $seek_beg;
+					$file_end = ($seek_end - $seek_beg);
+				}
+			}
+		}
+		else {
+			$chunks = false;
+			$this->setStatusCode(200);
+		}
+		$this->setContentType($extension);
+		if(!$this->hasHeader('Content-Type')) {
+			$this->setHeader('Content-Type', 'application/octet-stream');
+		}
+		$this->setHeader('Content-Disposition', ( !$chunks && in_array(strtolower($extension), array('txt','png','jpg','gif','jpeg','html','htm')) ? 'inline' : 'attachment' ).'; filename="'.preg_replace('([^a-z0-9.-]+)i', '_', $file_name).'"; filename*=UTF-8\'\'' . rawurlencode($file_name) . '; size=' . $file->size);
+		if($file_end) {
+			$this->setHeader('Content-Length', $file_end); 
+		}
+
+		while(ob_get_level() && ob_end_clean()) ;
+		
+		if(!headers_sent()) {
+			http_response_code($this->code);
+			foreach($this->head as $key => $header) {
+				header($key . ': ' . $header);
+			}
+		}
+
+		if($location && ($fp = @fopen($location, 'rb'))) {
+			set_time_limit(0);
+			ob_implicit_flush(true);
+			@ob_end_flush();
+
+			fseek($fp, $file_beg);
+			$chunk = 1024 * 8;
+			$read = 0;
+			while(!feof($fp) && $read <= $file_end) {
+				echo fread($fp, $chunk);
+				$read += $chunk;
+				if($file_end - $read < $chunk) {
+					$chunk = $file_end - $read;
+				}
+				if(!$chunk) {
+					break;
+				}
+			}
+			@fclose($fp);
+		}
+		@ob_end_flush();
+		$this->body = null;
+		$this->head = [];
+	}
+
 	public function send() {
 		if(!$this->hasHeader('Content-Type')) {
 			$this->setContentType('html');

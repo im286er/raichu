@@ -85,11 +85,11 @@ class Mail
 	}
 
 	public function send() {
-		$this->setHeader('From: ', $this->from);
+		$this->setHeader('From', $this->from);
 		if($this->hasAttachments()) {
 			$b = '==Multipart_Boundary_x'.md5(microtime()).'x';
-			$this->setHeader('MIME-Version: 1.0;');
-			$this->setHeader('Content-Type: multipart/mixed; boundary="'.$b.'"');
+			$this->setHeader('MIME-Version', '1.0;');
+			$this->setHeader('Content-Type', 'multipart/mixed; boundary="'.$b.'"');
 
 			$m  = '';
 			$m .= '--' . $b . "\n";
@@ -115,6 +115,10 @@ class Mail
 			$this->setHeader('MIME-Version', '1.0;');
 			$this->setHeader('Content-Type', 'text/'.($this->html ? 'html' : 'plain').'; charset="utf-8"');
 		}
-		return @mail(implode(', ', $this->to), '=?utf-8?B?'.base64_encode((string)$this->subject).'?=', (string)$this->message, implode("\r\n", $this->headers)) ? true : false;
+		$headers = [];
+		foreach($this->headers as $k => $v) {
+			$headers[] = $k . ': ' . $v;
+		}
+		return @mail(implode(', ', $this->to), '=?utf-8?B?'.base64_encode((string)$this->subject).'?=', (string)$this->message, implode("\r\n", $headers)) ? true : false;
 	}
 }
