@@ -148,6 +148,7 @@ class AbstractFile implements FileInterface
 			}
 			if(is_file($cropped_name) && is_readable($cropped_name)) {
 				$res->file(new FileDisk($cropped_name), $file_name);
+				return $res;
 			}
 		}
 		$res->file($this, $file_name);
