@@ -156,6 +156,23 @@ class Request implements RequestInterface
 		);
 	}
 
+	public function getLanguage($default = 'en') {
+		$acpt = $this->getHeader('Accept-Language') ?: $default;
+		$acpt = explode(',', $acpt);
+		foreach($acpt as $k => $v) {
+			$v = array_pad(explode(';', $v, 2), 2, 'q=1');
+			$v[1] = (float)array_pad(explode('q=', $v[1], 2), 2, '1')[1];
+			$v[0] = $v[0]; //explode('-', $v[0], 2)[0];
+			$v[2] = $k;
+			$acpt[$k] = $v;
+		}
+		uasort($acpt, function ($a, $b) {
+			if($a[1] > $b[1]) { return -1; }
+			if($a[1] < $b[1]) { return 1; }
+			return $b[2] > $b[1] ? -1 : 1;
+		});
+		return $acpt[0][0];
+	}
 	public function getResponseFormat($default = 'html') {
 		// parse accept header (uses default instead of 406 header)
 		$acpt = $this->extn ? 'application/' . $this->extn : ($this->getHeader('Accept') ?: 'application/' . $default);
