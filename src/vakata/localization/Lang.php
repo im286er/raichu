@@ -20,7 +20,7 @@ class Lang
 	}
 	public function get($key, $count = 0, array $replace = [], $code = null) {
 		if(!isset($code)) {
-			$code = isset($this->dflt) && isset($this->data[$this->dflt]) ? $this->data[$this->dflt] : array_keys($this->data);
+			$code = isset($this->dflt) && isset($this->data[$this->dflt]) ? $this->dflt : array_keys($this->data);
 		}
 		if(is_string($code)) {
 			$code = [$code];
@@ -38,7 +38,7 @@ class Lang
 	}
 	protected function parse($code, $key, $count = 0, array $replace = []) {
 		if(is_string($this->data[$code])) {
-			$this->data[$code] = @json_decode(file_get_contents($val), true);
+			$this->data[$code] = @json_decode(file_get_contents($this->data[$code]), true);
 		}
 		if(!isset($this->data[$code])) {
 			return null;

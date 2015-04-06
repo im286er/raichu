@@ -108,6 +108,7 @@ class Raichu
 		static::$inst['\\vakata\\event\\Event'] = null;
 		static::$inst['\\vakata\\random\\Random'] = null;
 		static::$inst['\\vakata\\user\\User'] = null;
+		static::$inst['\\vakata\\localization\\Lang'] = null;
 
 		// database
 		if(isset($settings['database']) && $settings['database']) {
@@ -215,6 +216,16 @@ class Raichu
 		static::$repl['log']		= '\\vakata\\log\\Log';
 		static::$repl['event']		= '\\vakata\\event\\Event';
 		static::$repl['random']		= '\\vakata\\random\\Random';
+		static::$repl['lang']		= '\\vakata\\localization\\Lang';
+
+		// languages
+		if(isset($settings['lang']) && is_array($settings['lang'])) {
+			$ln = static::instance('\\vakata\\localization\\Lang');
+			foreach($settings['lang'] as $k => $v) {
+				$ln->add($k, $v);
+			}
+			$ln->setDefault($rq->getLanguage(array_keys($settings['lang'])[0]));
+		}
 
 		// views
 		static::$repl['view']		= '\\vakata\\view\\View';
