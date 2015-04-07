@@ -5,6 +5,7 @@ class Lang
 {
 	protected $data = [];
 	protected $dflt = null;
+
 	public function add($code, $data, $dflt = false) {
 		$this->data[$code] = $data;
 		if($dflt) {
@@ -12,12 +13,20 @@ class Lang
 		}
 		return $this;
 	}
+	public function available() {
+		return array_keys($this->data);
+	}
+
 	public function setDefault($code) {
 		if(isset($this->data[$code])) {
 			$this->dflt = $code;
 		}
 		return $this;
 	}
+	public function getDefault($code) {
+		return $this->dflt;
+	}
+
 	public function get($key, $count = 0, array $replace = [], $code = null) {
 		if(!isset($code)) {
 			$code = isset($this->dflt) && isset($this->data[$this->dflt]) ? $this->dflt : array_keys($this->data);
@@ -36,6 +45,7 @@ class Lang
 		}
 		return $key;
 	}
+
 	protected function parse($code, $key, $count = 0, array $replace = []) {
 		if(is_string($this->data[$code])) {
 			$this->data[$code] = @json_decode(file_get_contents($this->data[$code]), true);
