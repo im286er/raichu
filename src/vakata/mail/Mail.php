@@ -120,8 +120,8 @@ class Mail
 	public function hasAttachments() {
 		return count($this->attached);
 	}
-	public function addAttachment(\vakata\file\FileInterface $file) {
-		$this->attached[] = $file;
+	public function addAttachment(\vakata\file\FileInterface $file, $name = null) {
+		$this->attached[] = [ $file, $name ];
 		return $this;
 	}
 	public function getAttachments() {
@@ -202,33 +202,58 @@ class Mail
 			$result .= "\r\n";
 		}
 
+		$result_bnd = '==Alternative_Boundary_x'.md5(microtime()).'x';
+		if($this->html) {
+			$alternative = '';
+			$alternative .= '--' . $result_bnd . "\r\n";
+			$alternative .= 'Content-Type: text/plain; charset="utf-8"' . "\r\n";
+			$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
+			$alternative .= strip_tags($result) . "\r\n\r\n";
+			$alternative .= '--' . $result_bnd . "\r\n";
+			$alternative .= 'Content-Type: text/html; charset="utf-8"' . "\r\n";
+			$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
+			$alternative .= $result . "\r\n\r\n";
+			$alternative .= '--' . $result_bnd . "--";
+			$result = $alternative;
+		}
+
 		if($this->hasAttachments()) {
 			$bnd = '==Multipart_Boundary_x'.md5(microtime()).'x';
 			$this->setHeader('MIME-Version', '1.0;');
 			$this->setHeader('Content-Type', 'multipart/mixed; boundary="'.$bnd.'"');
 
 			$message  = '';
-			$message .= '--' . $bnd . "\n";
-			$message .= 'Content-Type: text/html; charset="utf-8"' . "\n";
-			$message .= 'Content-Transfer-Encoding: 8bit' . "\n\n";
-			$message .= $result . "\n\n";
+			$message .= '--' . $bnd . "\r\n";
+			if($this->html) {
+				$message .= 'Content-Type: multipart/alternative; boundary="'.$result_bnd.'"' . "\r\n";
+			}
+			else {
+				$message .= 'Content-Type: text/plain; charset="utf-8"' . "\r\n";
+			}
+			$message .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
+			$message .= $result . "\r\n\r\n";
 
 			foreach($this->attached as $file) {
-				$content = &$file->content();
+				$content = &$file[0]->content();
 				if(!$content) { continue; }
-				$size = mb_strlen($content, '8bit');
+				$size = strlen($content);
 				$content = chunk_split(base64_encode($content));
-				$message .= '--' . $bnd . "\n";
-				$message .= 'Content-Type: application/octet-stream; name="' . '=?utf-8?B?'.base64_encode($file->name).'?=' . '"' . "\n";
-				$message .= 'Content-Disposition: attachment; size=' . $size . "\n";
-				$message .= 'Content-Transfer-Encoding: base64' . "\n\n";
-				$message .= $content . "\n\n";
+				$message .= '--' . $bnd . "\r\n";
+				$message .= 'Content-Type: application/octet-stream; name="' . '=?utf-8?B?'.base64_encode($file[1] ? $file[1] : $file[0]->name).'?=' . '"' . "\r\n";
+				$message .= 'Content-Disposition: attachment; size=' . $size . "\r\n";
+				$message .= 'Content-Transfer-Encoding: base64' . "\r\n\r\n";
+				$message .= $content . "\r\n\r\n";
 			}
 			$message .= '--' . $bnd . '--';
 		}
 		else {
 			$this->setHeader('MIME-Version', '1.0;');
-			$this->setHeader('Content-Type', 'text/'.($this->html ? 'html' : 'plain').'; charset="utf-8"');
+			if($this->html) {
+				$this->setHeader('Content-Type', 'multipart/alternative; boundary="'.$result_bnd.'"');
+			}
+			else {
+				$this->setHeader('Content-Type', 'text/plain; charset="utf-8"');
+			}
 			$message = $result;
 		}
 
