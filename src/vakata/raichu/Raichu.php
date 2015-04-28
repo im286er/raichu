@@ -11,6 +11,8 @@ class Raichu
 
 	private static $name = [];
 
+	private static $expr = [];
+
 	private function __construct() { }
 
 	public static function register($alias, $class, array $args = []) {
@@ -76,6 +78,60 @@ class Raichu
 	}
 	public static function __callStatic($class, array $args = []) {
 		return static::instance($class, $args);
+	}
+	public static function invoke($class, $method, array $args = [], array $construct = [], $named_only = false) {
+		if(is_string($class)) {
+			$class = static::instance($class, $construct, $named_only);
+		}
+		$clsn = strtolower(get_class($class));
+		$exec = [];
+		foreach(static::$expr as $k => $v) {
+			$k = explode('->', $k);
+			if($k[0] === '*' || strpos($clsn, $k[0]) !== false || is_a($class, $k[0])) {
+				if(!isset($k[1]) || $k[1] === '*' || strtolower($method) === $k[1]) {
+					$exec[] = &$v;
+				}
+			}
+		}
+		try {
+			foreach($exec as $v) {
+				foreach($v as $kk => $vv) {
+					if($kk === 'before') {
+						call_user_func($vv, [ 'class' => $class, 'method' => $method, 'args' => $args ]);
+					}
+				}
+			}
+			$data = call_user_func_array([$class, $method], $args);
+			foreach($exec as $v) {
+				foreach($v as $kk => $vv) {
+					if($kk === 'after') {
+						call_user_func($vv, [ 'class' => $class, 'method' => $method, 'args' => $args, 'result' => $data ]);
+					}
+				}
+			}
+		}
+		catch(\Exception $e) {
+			$excp = strtolower(get_class($e));
+			$rethrow = true;
+			foreach(static::$expr as $k => $v) {
+				$k = explode('->', $k);
+				if(strpos($excp, $k[0]) !== false) {
+					if(isset($v['exception'])) {
+						$rethrow = $rethrow && call_user_func($vv, [ 'class' => $class, 'method' => $method, 'args' => $args, 'exception' => $e ]) !== false;
+					}
+				}
+			}
+			if($rethrow) {
+				throw $e;
+			}
+		}
+		return $data;
+	}
+	public static function decorate($expression, callable $f, $mode = 'after') {
+		$expression = explode(',', $expression);
+		foreach($expression as $e) {
+			static::$expr[trim(strtolower($e))][$mode] = $f;
+		}
 	}
 
 	public static function get($key) {
@@ -203,6 +259,14 @@ class Raichu
 			}
 			if(isset($settings['user']['groups']) && $settings['user']['groups']) {
 				$m = static::instance('\\vakata\\user\\authentication\\DecoratorGroups', array_merge([$m], [$settings['user']['groups']]));
+			}
+			if(isset($settings['user']['totp']) && $settings['user']['totp']) {
+				$c = is_array($settings['user']['totp']) && isset($settings['user']['totp']['table']) && $settings['user']['totp']['table'] ?
+						'\\vakata\\user\\authentication\\TOTP\\DatabaseTOTP' :
+						'\\vakata\\user\\authentication\\TOTP\\TOTP';
+				$a = is_array($settings['user']['totp']) ? $settings['user']['totp'] : [];
+				if(isset($a['table']) && $a['table'] === true) { unset($a['table']); }
+				$m = static::instance($c, [$m, $a]);
 			}
 		}
 		static::$repl['user'] = static::$repl['\\vakata\\user\\UserInterface'] = '\\vakata\\user\\User';
