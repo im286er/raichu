@@ -22,7 +22,6 @@ class Manager implements AuthenticationInterface
 		return $this->prov;
 	}
 	public function authenticate($data = null) {
-		$user = [];
 		foreach($this->services as $service) {
 			$temp = $service->authenticate($data);
 			if($temp) {
