@@ -210,9 +210,41 @@ class Mail
 			$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
 			$alternative .= strip_tags($result) . "\r\n\r\n";
 			$alternative .= '--' . $result_bnd . "\r\n";
-			$alternative .= 'Content-Type: text/html; charset="utf-8"' . "\r\n";
-			$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
-			$alternative .= $result . "\r\n\r\n";
+			if(strpos($result, '<img ') !== false) {
+				$related_bnd = '==Related_Boundary_x'.md5(microtime()).'x';
+				$alternative .= 'Content-Type: multipart/related; '."\r\n\t".'boundary="'.$related_bnd.'"' . "\r\n\r\n";
+				$alternative .= '--' . $related_bnd . "\r\n";
+				$alternative .= 'Content-Type: text/html; charset="utf-8"' . "\r\n";
+				$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
+				$alternative .= preg_replace_callback(['(\<img(.*?)src\s*=\s*"([^"]+)")i', '(\<img(.*?)src\s*=\s*\'([^\']+)\')i', '(\<img(.*?)src=([^\'" ]+))i'], function ($matches) use (&$images) {
+					$k = md5($matches[2]) . '@local.dev';
+					$images[$k] = $matches[2];
+					return '<img '.$matches[1].' src="cid:' . $k . '" ';
+				}, $result);
+				$alternative .= "\r\n\r\n";
+				foreach($images as $k => $image) {
+					$content = file_get_contents($image);
+
+					$fnfo = finfo_open(FILEINFO_MIME_TYPE);
+					$mime = @finfo_buffer($fnfo, $content);
+					$extn = basename($image);
+					$extn = substr($extn, strrpos($extn, '.') + 1);
+					if(!$mime) {
+						continue;
+					}
+					$alternative .= '--' . $related_bnd . "\r\n";
+					$alternative .= 'Content-Type: '.$mime.'; name="' . md5($k) . '.' . $extn . '"' . "\r\n";
+					$alternative .= 'Content-Transfer-Encoding: base64' . "\r\n";
+					$alternative .= 'Content-ID: <' . $k . '>' . "\r\n\r\n";
+					$alternative .= chunk_split(base64_encode($content)) . "\r\n\r\n";
+				}
+				$alternative .= '--' . $related_bnd . "--"."\r\n\r\n";
+			}
+			else {
+				$alternative .= 'Content-Type: text/html; charset="utf-8"' . "\r\n";
+				$alternative .= 'Content-Transfer-Encoding: 8bit' . "\r\n\r\n";
+				$alternative .= $result . "\r\n\r\n";
+			}
 			$alternative .= '--' . $result_bnd . "--";
 			$result = $alternative;
 		}
@@ -220,12 +252,12 @@ class Mail
 		if($this->hasAttachments()) {
 			$bnd = '==Multipart_Boundary_x'.md5(microtime()).'x';
 			$this->setHeader('MIME-Version', '1.0;');
-			$this->setHeader('Content-Type', 'multipart/mixed; boundary="'.$bnd.'"');
+			$this->setHeader('Content-Type', 'multipart/mixed; '."\r\n\t".'boundary="'.$bnd.'"');
 
 			$message  = '';
 			$message .= '--' . $bnd . "\r\n";
 			if($this->html) {
-				$message .= 'Content-Type: multipart/alternative; boundary="'.$result_bnd.'"' . "\r\n";
+				$message .= 'Content-Type: multipart/alternative; '."\r\n\t".'boundary="'.$result_bnd.'"' . "\r\n";
 			}
 			else {
 				$message .= 'Content-Type: text/plain; charset="utf-8"' . "\r\n";
@@ -249,7 +281,7 @@ class Mail
 		else {
 			$this->setHeader('MIME-Version', '1.0;');
 			if($this->html) {
-				$this->setHeader('Content-Type', 'multipart/alternative; boundary="'.$result_bnd.'"');
+				$this->setHeader('Content-Type', 'multipart/alternative; '."\r\n\t".'boundary="'.$result_bnd.'"');
 			}
 			else {
 				$this->setHeader('Content-Type', 'text/plain; charset="utf-8"');
