@@ -128,7 +128,9 @@ class Raichu
 		return $data;
 	}
 	public static function decorate($expression, callable $f, $mode = 'after') {
-		$expression = explode(',', $expression);
+		if(!is_array($expression)) {
+			$expression = explode(',', $expression);
+		}
 		foreach($expression as $e) {
 			static::$expr[trim(strtolower($e))][$mode] = $f;
 		}
