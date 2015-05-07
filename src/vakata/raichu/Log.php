@@ -13,7 +13,7 @@ class Log
 		$this->tb = $tb;
 	}
 
-	public function insert($module, $method, array $data = []) {
+	public function insert($module, $method = '', array $data = []) {
 		try {
 			$user = \vakata\raichu\Raichu::user()->id;
 		}
@@ -31,7 +31,7 @@ class Log
 			$this->userAgent()
 		]);
 	}
-	public function __invoke($module, $method, array $data = []) {
+	public function __invoke($module, $method = '', array $data = []) {
 		return $this->insert($module, $method, $data);
 	}
 }
