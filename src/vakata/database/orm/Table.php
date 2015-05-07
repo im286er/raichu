@@ -101,7 +101,12 @@ class Table implements TableInterface
 		return $this->addRelation($tb, $this->tb . '_' . $this->pk, null, true, $pivot ? $pivot : $this->tb . '_' . $pivot, $field);
 	}
 	protected function addRelation($tb, $local_key, $foreign_key = null, $many = true, $pivot = null, $field = null) {
-		$temp = $tb instanceof Table ? $tb : new Table($this->db, $tb);
+		$df = null;
+		if(is_array($tb)) {
+			$df = isset($tb['definition']) ? $tb['definition'] : null;
+			$tb = $tb['table'];
+		}
+		$temp = $tb instanceof Table ? $tb : new Table($this->db, $tb, $df);
 		if(!$foreign_key) {
 			$foreign_key = ($pivot ? $temp->getTableName() . '_' : '') . $temp->getPrimaryKey();
 		}
