@@ -207,9 +207,11 @@ class Raichu
 					session_save_path($settings['session']['location']);
 				}
 				if($settings['session']['storage'] === 'database') {
+					@ini_set('session.save_handler', 'user');
 					session_set_save_handler(static::instance('\\vakata\\session\\SessionDatabase', [$settings['session']['location']]));
 				}
 				if($settings['session']['storage'] === 'cache') {
+					@ini_set('session.save_handler', 'user');
 					session_set_save_handler(static::instance('\\vakata\\session\\SessionCache', [$settings['session']['location']]));
 				}
 			}
@@ -351,6 +353,9 @@ class Raichu
 			$rt->run($ur, $rq, $rs);
 			$rs->send();
 		});
+		if(isset($settings['session']) && is_array($settings['session']) && isset($settings['session']['storage']) && ($settings['session']['storage'] === 'database' || $settings['session']['storage'] === 'cache')) {
+			register_shutdown_function('session_write_close');
+		}
 	}
 }
 
