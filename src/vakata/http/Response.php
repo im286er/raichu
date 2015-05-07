@@ -199,6 +199,7 @@ class Response implements ResponseInterface
 			$this->setHeader('Content-Length', $file_end); 
 		}
 
+		session_write_close();
 		while(ob_get_level() && ob_end_clean()) ;
 		
 		if(!headers_sent()) {
