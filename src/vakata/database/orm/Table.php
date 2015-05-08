@@ -10,6 +10,7 @@ class Table implements TableInterface
 	protected $pk     = null;
 	protected $fd     = [];
 	protected $tx     = [];
+	protected $lk     = [];
 	protected $rl     = [];
 	protected $ext    = [];
 	protected $new    = [];
@@ -28,7 +29,14 @@ class Table implements TableInterface
 		}
 		$this->pk = $definition['primary_key'];
 		$this->fd = $definition['columns'];
-		$this->tx = $definition['indexed'];
+		$this->tx = isset($definition['indexed']) ? $definition['indexed'] : [];
+		if(isset($definition['like']) && is_array($definition['like'])) {
+			foreach($definition['like'] as $c) {
+				if(in_array($c, $this->fd)) {
+					$this->lk[] = $c;
+				}
+			}
+		}
 
 		$this->reset();
 	}
@@ -126,6 +134,16 @@ class Table implements TableInterface
 		if(count($this->tx) && is_string($term) && strlen($term) >= 4) {
 			$this->filter('MATCH ('.implode(', ', $this->tx).') AGAINST (?)', [$term]);
 		}
+		if(count($this->lk) && is_string($term) && strlen($term)) {
+			$term = '%' . str_replace(['%','_'], ['\\%', '\\_'], $term) . '%';
+			$sql = '';
+			$par = [];
+			foreach($this->lk as $fd) {
+				$sql[] = $fd . ' LIKE ?';
+				$par[] = $term;
+			}
+			$this->filter('('.implode(' OR ', $sql).')', $par);
+		}
 		return $this;
 	}
 	public function filter($sql, array $params = []) {
@@ -181,7 +199,10 @@ class Table implements TableInterface
 			$fields = $temp;
 		}
 		if(!$fields || !count($fields)) {
-			$fields = ['t.*'];
+			$fields = [];
+			foreach($this->fd as $c) {
+				$fields[] = 't.'.$c;
+			}
 		}
 		$sql = 'SELECT ' . implode(', ', $fields). ' FROM ' . $this->tb . ' AS t ';
 		foreach($this->joined as $k => $v) {

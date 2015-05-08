@@ -2,6 +2,12 @@
 namespace vakata\database\driver;
 use vakata\database\DatabaseException;
 
+/*
+$db = new \vakata\database\DB('sphinx://root@127.0.0.1:9306/raichu');
+$db->query("INSERT INTO rt (id, title, content) VALUES(4, 'асдф','asdf')");
+var_dump($db->all("SELECT *, WEIGHT() w FROM rt WHERE MATCH(?)", ['асдф']));
+ */
+
 class Sphinx extends AbstractDriver
 {
 	protected $iid = 0;
