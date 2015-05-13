@@ -66,7 +66,7 @@ class Lang
 		return $this->get($key, $count, $replace, $code);
 	}
 	public function dump($code = null) {
-		if($code === null) {
+		if($code === null || !isset($this->data[$code])) {
 			$code = isset($this->dflt) && isset($this->data[$this->dflt]) ? $this->dflt : key($this->data);
 		}
 		if(!isset($this->lang[$code])) {
