@@ -40,11 +40,11 @@ class Oracle extends AbstractDriver
 		$binder = '?';
 		if(strpos($sql, $binder) !== false) {
 			$tmp = explode($this->binder, $sql);
-			$sql = $tmp[0];
+			$sql = '';
 			foreach($tmp as $i => $v) {
-				$sql .= ':f' . $i;
+				$sql .= $v;
 				if(isset($tmp[($i + 1)])) {
-					$sql .= $tmp[($i + 1)];
+					$sql .= ':f' . $i;
 				}
 			}
 		}

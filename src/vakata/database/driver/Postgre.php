@@ -53,11 +53,11 @@ class Postgre extends AbstractDriver
 		$binder = '?';
 		if(strpos($sql, $binder) !== false) {
 			$tmp = explode($binder, $sql);
-			$sql = $tmp[0];
+			$sql = '';
 			foreach($tmp as $i => $v) {
-				$sql .= '$' . ($i + 1);
+				$sql .= $v;
 				if(isset($tmp[($i + 1)])) {
-					$sql .= $tmp[($i + 1)];
+					$sql .= '$' . ($i + 1);
 				}
 			}
 		}
