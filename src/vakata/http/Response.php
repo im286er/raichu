@@ -161,7 +161,7 @@ class Response implements ResponseInterface
 		}
 		// ако получаваме заявка за чънкове (resume/chunk поддръжка чрез HTTP_RANGE) 
 		// но само ако имаме размера
-		if($chunks && $file->size && isset($_SERVER['HTTP_RANGE'])) {
+		if($chunks && $file->size && $location && isset($_SERVER['HTTP_RANGE'])) {
 			$this->setHeader('Accept-Ranges', 'bytes');
 			if(!preg_match('@^bytes=\d*-\d*(,\d*-\d*)*$@', $_SERVER['HTTP_RANGE'])) {
 				$this->setStatusCode(416);
@@ -228,6 +228,9 @@ class Response implements ResponseInterface
 				}
 			}
 			@fclose($fp);
+		}
+		else {
+			echo $file->content();
 		}
 		@ob_end_flush();
 		$this->body = null;

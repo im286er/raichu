@@ -58,7 +58,7 @@ class AbstractFile implements FileInterface
 		$extension = $file_name ? substr($file_name, strrpos($file_name, ".") + 1) : $this->extension;
 		$file_name = $file_name ? : $this->name;
 
-		if( ((int)$width || (int)$height) && in_array(strtolower($extension), array('png','jpg','gif','jpeg','bmp'))) {
+		if( ((int)$width || (int)$height) && $this->location && in_array(strtolower($extension), array('png','jpg','gif','jpeg','bmp'))) {
 			$width  = min(4096, (int)$width);
 			$height = min(4096, (int)$height);
 			$cropped_name = $this->location.'_'.(int)$width.'x'.(int)$height;
