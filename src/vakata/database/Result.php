@@ -87,7 +87,9 @@ class Result implements ResultInterface, \JsonSerializable
 		if($this->rdy) {
 			return reset($this->all);
 		}
-		$this->rslt->seek(($this->real_key = 0));
+		if($this->rslt->seekable()) {
+			$this->rslt->seek(($this->real_key = 0));
+		}
 		$this->rslt->nextr();
 	}
 	public function valid() {
