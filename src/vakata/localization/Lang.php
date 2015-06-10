@@ -40,8 +40,9 @@ class Lang
 		}
 		return $this;
 	}
-	public function getDefault($code) {
-		return $this->dflt;
+	public function getDefault() {
+		return isset($this->dflt) && isset($this->data[$this->dflt]) ? $this->dflt : array_keys($this->data)[0];
+		//return $this->dflt;
 	}
 
 	public function get($key, $count = 0, array $replace = [], $code = null) {

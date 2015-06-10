@@ -330,9 +330,14 @@ class Raichu
 		// csp
 		if(isset($settings['csp']) && $settings['csp']) {
 			$csp = $ur->base() . 'csp-report';
-			$rs->addFilter(function ($body, $mime) use ($rs, $rq, $csp) {
+			$rs->addFilter(function ($body, $mime) use ($rs, $rq, $csp, $settings) {
 				if(strpos($mime, 'htm') !== false) {
-					$rs->setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' *.".$ur->domain()." ajax.googleapis.com; style-src 'self' 'unsafe-inline' *.".$ur->domain()."; img-src *; font-src *; frame-src 'self' facebook.com *.facebook.com *.twitter.com *.google.com; object-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; media-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; report-uri " . $csp);
+					if($settings['csp'] === true) {
+						$rs->setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-eval' *.".$ur->domain()." ajax.googleapis.com; style-src 'self' 'unsafe-inline' *.".$ur->domain()."; img-src *; font-src *; frame-src 'self' facebook.com *.facebook.com *.twitter.com *.google.com; object-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; media-src youtube.com *.youtube.com vbox7.com *.vbox7.com vimeo.com *.vimeo.com; report-uri " . $csp);
+					}
+					else {
+						$rs->setHeader("Content-Security-Policy", $settings['csp']."; report-uri " . $csp);
+					}
 				}
 				return $body;
 			});
