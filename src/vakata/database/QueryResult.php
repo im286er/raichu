@@ -19,7 +19,11 @@ class QueryResult
 		$this->rsl = $this->drv->execute($this->prp, $data);
 		$this->num = (is_object($this->rsl) || is_resource($this->rsl)) && $this->drv->countable() ? (int)@$this->drv->count($this->rsl) : 0;
 		$this->aff = $this->drv->affected();
-		$this->iid = $this->drv->insertId();
+		try {
+			$this->iid = $this->drv->insertId();
+		} catch(\Exception $e) {
+			$this->iid = null;
+		}
 	}
 	public function __destruct() {
 		$this->free();

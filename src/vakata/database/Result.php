@@ -65,7 +65,7 @@ class Result implements ResultInterface, \JsonSerializable
 		if($this->opti && is_array($row) && count($row) <= 1) {
 			$row = count($row) ? current($row) : current($tmp);
 		}
-		return $row;
+		return $this->mode === 'obj' && is_array($row) ? (object)$row : $row;
 	}
 	public function key() {
 		if($this->rdy) {

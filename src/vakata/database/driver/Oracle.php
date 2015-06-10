@@ -39,7 +39,7 @@ class Oracle extends AbstractDriver
 		$this->connect();
 		$binder = '?';
 		if(strpos($sql, $binder) !== false) {
-			$tmp = explode($this->binder, $sql);
+			$tmp = explode($binder, $sql);
 			$sql = '';
 			foreach($tmp as $i => $v) {
 				$sql .= $v;
@@ -94,10 +94,6 @@ class Oracle extends AbstractDriver
 		return $this->aff;
 	}
 
-	public function countable() {
-		return true;
-	}
-
 	public function begin() {
 		$this->connect();
 		return $this->transaction = true;
@@ -128,17 +124,15 @@ class Oracle extends AbstractDriver
 		return $this->transaction;
 	}
 
-	/*
-	public function insert_id($name = null) {
-		$stm = oci_parse($this->link, 'SELECT '.strtoupper(str_replace("'",'',$name)).'.CURRVAL FROM DUAL');
-		oci_execute($stm, $this->transaction ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS);
-		$tmp = oci_fetch_array($stm);
-		$tmp = $tmp[0];
-		oci_free_statement($stm);
-		return $tmp;
-	}
+	//public function insertId() {
+		//$stm = oci_parse($this->link, 'SELECT '.strtoupper(str_replace("'",'',$name)).'.CURRVAL FROM DUAL');
+		//oci_execute($stm, $this->transaction ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS);
+		//$tmp = oci_fetch_array($stm);
+		//$tmp = $tmp[0];
+		//oci_free_statement($stm);
+		//return $tmp;
+	//}
 	public function free($result) {
-		//@oci_free_statement($result);
+		@oci_free_statement($result);
 	}
-	*/
 }

@@ -20,14 +20,14 @@ class Mssql extends AbstractDriver
 				$options["PWD"] = $this->settings->password;
 			}
 			if($this->settings->charset) {
-				$options["CharacterSet"] = strtoupper($this->settings->charset);
+				//$options["CharacterSet"] = strtoupper($this->settings->charset);
 			}
 			$server = $this->settings->servername;
-			if($this->settings->port) {
-				$server .= ', ' . $this->settings->port;
+			if(isset($this->settings->serverport) && $this->settings->serverport) {
+				$server .= ', ' . $this->settings->serverport;
 			}
 
-			$this->lnk = sqlsrv_connect($this->settings->servername, $options);
+			$this->lnk = @sqlsrv_connect($server, $options);
 
 			if($this->lnk === false) {
 				throw new DatabaseException('Connect error');
@@ -68,12 +68,14 @@ class Mssql extends AbstractDriver
 	public function nextr($result) {
 		return sqlsrv_fetch_array($result, SQLSRV_FETCH_BOTH);
 	}
+	/*
 	public function seek($result, $row) {
 		return @sqlsrv_fetch_array($result, SQLSRV_FETCH_BOTH, SQLSRV_SCROLL_ABSOLUTE, $row);
 	}
 	public function count($result) {
 		return sqlsrv_num_rows($result);
 	}
+	*/
 	public function affected() {
 		return $this->aff;
 	}
@@ -82,10 +84,10 @@ class Mssql extends AbstractDriver
 	}
 
 	public function seekable() {
-		return true;
+		return false;
 	}
 	public function countable() {
-		return true;
+		return false;
 	}
 
 	public function begin() {

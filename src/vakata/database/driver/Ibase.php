@@ -12,7 +12,7 @@ class Ibase extends AbstractDriver
 		if(!is_file($this->settings->database) && is_file('/'.$this->settings->database)) {
 			$this->settings->database = '/'.$this->settings->database;
 		}
-		$this->settings->servername = ($this->settings->servername === 'localhost' || $this->settings->servername === '127.0.0.1' || $this->settings->servername === '') ?
+		$this->settings->servername = ($this->settings->servername === 'localhost' || $this->settings->servername === '') ?
 			'' :
 			$this->settings->servername . ':';
 	}
