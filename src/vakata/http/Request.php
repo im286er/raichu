@@ -58,7 +58,8 @@ class Request implements RequestInterface
 		}
 		// remove invalid utf8 chars
 		if(preg_match('/[^\x00-\x7F]/S', $value) != 0) {
-			$value = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+			$temp = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+			if($temp !== false) { $value = $temp; }
 		}
 		// remove non-printable chars
 		do {
