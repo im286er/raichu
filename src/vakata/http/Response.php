@@ -76,6 +76,8 @@ class Response implements ResponseInterface
 			case "ppt"  : $type = "application/vnd.ms-powerpoint"; break;
 			case "gif"  : $type = "image/gif"; break;
 			case "png"  : $type = "image/png"; break;
+			case "mp3"  : $type = "audio/mpeg"; break;
+			case "mp4"  : $type = "video/mpeg"; break;
 			case "jpeg" :
 			case "jpg"  : $type = "image/jpg"; break;
 			case "html" :
@@ -194,7 +196,7 @@ class Response implements ResponseInterface
 		if(!$this->hasHeader('Content-Type')) {
 			$this->setHeader('Content-Type', 'application/octet-stream');
 		}
-		$this->setHeader('Content-Disposition', ( !$chunks && in_array(strtolower($extension), array('txt','png','jpg','gif','jpeg','html','htm')) ? 'inline' : 'attachment' ).'; filename="'.preg_replace('([^a-z0-9.-]+)i', '_', $file_name).'"; filename*=UTF-8\'\'' . rawurlencode($file_name) . '; size=' . $file->size);
+		$this->setHeader('Content-Disposition', ( !$chunks && in_array(strtolower($extension), array('txt','png','jpg','gif','jpeg','html','htm','mp3','mp4')) ? 'inline' : 'attachment' ).'; filename="'.preg_replace('([^a-z0-9.-]+)i', '_', $file_name).'"; filename*=UTF-8\'\'' . rawurlencode($file_name) . '; size=' . $file->size);
 		if($file_end) {
 			$this->setHeader('Content-Length', $file_end); 
 		}
