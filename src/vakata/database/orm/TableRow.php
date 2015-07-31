@@ -5,20 +5,24 @@ use vakata\dabatase\DatabaseException;
 
 class TableRow implements TableRowInterface
 {
-	protected $tbl  = null;
-	protected $data = [];
-	protected $xtra = [];
-	protected $inst = [];
-	protected $chng = [];
-	protected $cche = [];
+	protected $tbl    = null;
+	protected $data   = [];
+	protected $xtra   = [];
+	protected $inst   = [];
+	protected $chng   = [];
+	protected $cche   = [];
+	protected $is_new = false;
+	protected $orig_id = null;
 
-	public function __construct(Table $tbl, array $data = []) {
-		$this->tbl  = $tbl;
+	public function __construct(Table $tbl, array $data = [], $is_new = false) {
+		$this->tbl = $tbl;
+		$this->is_new = $is_new;
 		foreach($this->tbl->getColumns() as $column) {
 			if(isset($data[$column])) {
 				$this->data[$column] = $data[$column];
 			}
 		}
+		$this->orig_id = $this->getID();
 		foreach($data as $k => $v) {
 			if(!isset($this->data[$k])) {
 				$this->data[str_replace('___', '.', $k)] = $v;
@@ -153,11 +157,10 @@ class TableRow implements TableRowInterface
 			$this->tbl->getDatabase()->begin();
 		}
 		try {
-			$id = $this->tbl->getPrimaryKey();
-			$fk = $this->{$id};
-			$nw = false;
+			$pk = $this->tbl->getPrimaryKey();
+			$fk = $this->{$pk};
 
-			if(!$fk) {
+			if(!$this->is_new) {
 				$this->chng = array_merge($this->data, $this->chng);
 			}
 
@@ -173,7 +176,7 @@ class TableRow implements TableRowInterface
 
 			// own data
 			if(count($this->chng)) {
-				if($fk !== null) {
+				if(!$this->is_new) {
 					$col = [];
 					$par = [];
 					foreach($this->chng as $k => $v) {
@@ -183,8 +186,8 @@ class TableRow implements TableRowInterface
 						}
 					}
 					if(count($col)) {
-						$par[] = $fk;
-						$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE id = ?', $par);
+						$par[] = $this->orig_id !== null ? $this->orig_id : $fk;
+						$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE '.$this->tbl->getPrimaryKey().' = ?', $par);
 					}
 				}
 				else {
@@ -197,22 +200,24 @@ class TableRow implements TableRowInterface
 					if(!count($temp)) {
 						throw new ORMException('Nothing to insert');
 					}
-					$fk = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
-					$nw = true;
+					$iid = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
+					if($fk === null) {
+						$fk = $iid;
+					}
 				}
 			}
 			// has relations
-			if($fk) {
+			if($fk !== null) {
 				foreach($this->inst as $k => $v) {
 					if($v['pivot']) {
 						$temp = $this->{$k}()->save();
-						$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
+						$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$this->orig_id !== null ? $this->orig_id : $fk]);
 						foreach($temp as $id) {
 							$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $id]);
 						}
 					}
 					else {
-						if($v['local_key'] === $id) {
+						if($v['local_key'] === $pk) {
 							// set the foreign key on all rows in the collection to $fk
 							$temp = [];
 							$temp[$v['foreign_key']] = $fk;

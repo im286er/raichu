@@ -341,7 +341,7 @@ class Table implements TableInterface
 	}
 	// creation
 	public function create(array $data) {
-		$temp = new TableRow(clone $this);
+		$temp = new TableRow(clone $this, [], true);
 		$temp->fromArray($data);
 		return $this->new[] = $temp;
 	}
