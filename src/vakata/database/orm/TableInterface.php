@@ -13,10 +13,10 @@ interface TableInterface extends \Iterator, \ArrayAccess, \JsonSerializable
 
 	public function getRelations();
 	public function getRelationKeys();
-	public function hasOne($tb, $key = null, $field = null);
-	public function hasMany($tb, $key = null, $field = null);
-	public function belongsTo($tb, $key = null, $field = null);
-	public function manyToMany($tb, $pivot = null, $field = null);
+	public function hasOne($to_table, $name = null, $to_table_column = null);
+	public function hasMany($to_table, $name = null, $to_table_column = null);
+	public function belongsTo($to_table, $name = null, $to_table_column = null);
+	public function manyToMany($to_table, $pivot, $name = null, $to_table_column = null, $local_column = null);
 
 	public function search($term);
 	public function filter($sql, array $params = []);

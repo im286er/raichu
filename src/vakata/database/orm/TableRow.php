@@ -5,62 +5,60 @@ use vakata\dabatase\DatabaseException;
 
 class TableRow implements TableRowInterface
 {
-	protected $tbl    = null;
+	protected $table       = null;
+	protected $relations   = [];
+
+	protected $is_new      = false;
+	protected $original_id = null;
+
 	protected $data   = [];
-	protected $xtra   = [];
-	protected $inst   = [];
 	protected $chng   = [];
 	protected $cche   = [];
-	protected $is_new = false;
-	protected $orig_id = null;
 
-	public function __construct(Table $tbl, array $data = [], $is_new = false) {
-		$this->tbl = $tbl;
+
+	public function __construct(TableInterface $table, array $data = [], $is_new = false) {
+		$this->table = $table;
 		$this->is_new = $is_new;
-		foreach($this->tbl->getColumns() as $column) {
+		foreach($this->table->getColumns() as $column) {
 			if(isset($data[$column])) {
 				$this->data[$column] = $data[$column];
 			}
 		}
-		$this->orig_id = $this->getID();
+		$this->original_id = $this->getID();
 		foreach($data as $k => $v) {
 			if(!isset($this->data[$k])) {
 				$this->data[str_replace('___', '.', $k)] = $v;
 			}
 		}
-		foreach($this->tbl->getRelations() as $rl) {
-			$this->inst[$rl['field']] = [
-				'class'       => $rl['table'],
-				'many'        => $rl['many'],
-				'foreign_key' => $rl['foreign_key'],
-				'local_key'   => $rl['local_key'],
-				'pivot'       => $rl['pivot']
-			];
-		}
+		
+		$this->relations = $this->table->getRelations();
 	}
 
 	public function getTableName() {
-		return $this->tbl->getTableName();
+		return $this->table->getTableName();
 	}
 	public function getIndexed() {
-		return $this->tbl->getIndexed();
+		return $this->table->getIndexed();
 	}
 	public function getColumns() {
-		return $this->tbl->getColumns();
+		return $this->table->getColumns();
 	}
 	public function getPrimaryKey() {
-		return $this->tbl->getPrimaryKey();
-	}
-	public function getRelations() {
-		return $this->tbl->getRelations();
+		return $this->table->getPrimaryKey();
 	}
 	public function getRelationKeys() {
-		return $this->tbl->getRelationKeys();
+		return $this->table->getRelationKeys();
+	}
+	public function getRelations() {
+		return $this->relations;
 	}
 
 	public function getID() {
-		$pk = $this->tbl->getPrimaryKey();
-		return $this->{$pk};
+		$temp = [];
+		foreach($this->table->getPrimaryKey() as $pk_field) {
+			$temp[$pk_field] = $this->{$pk_field};
+		}
+		return $temp;
 	}
 
 	public function __get($key) {
@@ -70,16 +68,16 @@ class TableRow implements TableRowInterface
 		if(isset($this->data[$key])) {
 			return $this->data[$key];
 		}
-		if(isset($this->inst[$key])) {
+		if(isset($this->relations[$key])) {
 			$temp = $this->{$key}();
 			if(isset($temp)) {
-				return $this->inst[$key]['many'] ? $temp : (isset($temp[0]) ? $temp[0] : null);
+				return $this->relations[$key]['many'] ? $temp : (isset($temp[0]) ? $temp[0] : null);
 			}
 		}
 		return null;
 	}
 	public function __call($key, $args) {
-		if(!isset($this->inst[$key])) {
+		if(!isset($this->relations[$key])) {
 			return null;
 		}
 		$ckey = $key;
@@ -90,31 +88,41 @@ class TableRow implements TableRowInterface
 			return $this->cche[$ckey];
 		}
 
-		$inst = $this->inst[$key];
-		$lkey = $inst['local_key'];
-		$pkey = $this->tbl->getPrimaryKey();
-		$tbl  = clone $inst['class'];
+		$relation = $this->relations[$key];
+		$table  = clone $relation['table'];
 
-		if($inst['pivot']) {
-			$ids = $this->{$pkey} ? 
-				$this->tbl->getDatabase()->all('SELECT ' . $inst['foreign_key'] . ' FROM ' . $inst['pivot'] . ' WHERE ' . $inst['local_key'] . ' = ?', [$this->{$pkey}]) : 
-				[];
-			return $this->cche[$ckey] = count($ids) ?
-				$tbl->filter($inst['class']->getPrimaryKey() . ' IN ('.implode(',',array_fill(0, count($ids), '?')).')', $ids)->read(isset($args[0]) ? $args[0] : []) :
-				$tbl->filter('1 = 0')->read();
+		if($relation['pivot']) {
+			$sql = 'SELECT ' . implode(',', array_keys($relation['pivot_keymap'])) . ' FROM ' . $relation['pivot'] . ' WHERE ';
+			$par = [];
+			$tmp = [];
+			foreach($relation['keymap'] as $k => $v) {
+				$tmp[] = ' ' . $v . ' = ? ';
+				$par[] = $this->{$k};
+			}
+			$sql .= implode(' AND ', $tmp);
+			$ids = $this->table->getDatabase()->all($sql, $par);
+
+			if(!count($ids)) {
+				return $this->cche[$ckey] = $table->filter('1 = 0')->read();
+			}
+			return $this->cche[$ckey] = $table->filter(
+				' (' . implode(',', $relation['pivot_keymap']) . ') IN ('.implode(',', array_fill(0, count($ids), (count($relation['pivot_keymap']) === 1 ? '?' : '('.implode(',', array_fill(0, count($relations['pivot_keymap']), '?')).')'))).')',
+				count($relation['pivot_keymap']) === 1 ? $ids : call_user_func_array('array_merge', $ids)
+			)->read(isset($args[0]) ? $args[0] : []);
 		}
-		return $this->cche[$ckey] = $this->{$lkey} ? 
-			$tbl->filter($inst['foreign_key'] . ' = ?', [$this->{$lkey}])->read(isset($args[0]) ? $args[0] : []) : 
-			$tbl->filter('1 = 0')->read();
+		$sql = [];
+		$par = [];
+		foreach($relation['keymap'] as $k => $v) {
+			$sql[] = ' ' . $v . ' = ? ';
+			$par[] = $this->{$k};
+		}
+		return $this->cche[$ckey] = $table->filter(implode(' AND ', $sql), $par)->read(isset($args[0]) ? $args[0] : []);
 	}
 
-	public function toArray($full = true, $xtra = true) {
+	public function toArray($full = true) {
 		$temp = array_merge($this->data, $this->chng);
-		if($xtra) {
-			$temp = array_merge($temp, $this->xtra);
-		}
 		if($full) {
-			foreach($this->inst as $k => $v) {
+			foreach($this->relations as $k => $v) {
 				if($this->{$k}) {
 					$temp[$k] = $this->{$k}->toArray(true);
 				}
@@ -135,10 +143,10 @@ class TableRow implements TableRowInterface
 		}
 	}
 	public function __set($key, $value) {
-		if(in_array($key, $this->tbl->getColumns()) && (isset($this->chng[$key]) || !isset($this->data[$key]) || $this->data[$key] !== $value)) {
+		if(in_array($key, $this->table->getColumns()) && (isset($this->chng[$key]) || !isset($this->data[$key]) || $this->data[$key] !== $value)) {
 			$this->chng[$key] = $value;
 		}
-		if(isset($this->inst[$key])) {
+		if(isset($this->relations[$key])) {
 			$temp = $this->{$k}();
 			if($temp) {
 				foreach($temp as $k => $v) {
@@ -151,25 +159,59 @@ class TableRow implements TableRowInterface
 		}
 	}
 
+	// MODIFIERS - TODO: use relation collection SAVE method, take care when deleting, get full nodes back from SAVE
 	public function save() {
-		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		$wasInTransaction = $this->table->getDatabase()->isTransaction();
 		if(!$wasInTransaction) {
-			$this->tbl->getDatabase()->begin();
+			$this->table->getDatabase()->begin();
 		}
 		try {
-			$pk = $this->tbl->getPrimaryKey();
-			$fk = $this->{$pk};
+			$pk = $this->table->getPrimaryKey();
+			$fk = $this->getID();
 
 			if(!$this->is_new) {
 				$this->chng = array_merge($this->data, $this->chng);
 			}
 
-			// belongs relations
-			foreach($this->inst as $k => $v) {
-				if(!$v['pivot'] && $v['foreign_key'] === $v['class']->getPrimaryKey()) {
-					// belongs relation, update own field
-					foreach($this->{$k}()->save() as $id) {
-						$this->chng[$v['local_key']] = $id;
+			// belongs relations (update if none of the local keys are part of the primary key)
+			foreach($this->relations as $k => $v) {
+				if(!count(array_intersect($this->table->getPrimaryKey(), array_keys($v['keymap'])))) {
+					if($v['pivot']) {
+						$sql = [];
+						$par = [];
+						$que = [];
+						foreach($v['keymap'] as $local => $remote) {
+							$sql[] = $remote . ' = ? ';
+							$par[] = $this->{$local};
+						}
+						$que[] = ['DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par];
+
+						foreach($this->{$k}()->save([], false) as $item) {
+							$sql = [];
+							$par = [];
+							foreach($v['keymap'] as $local => $remote) {
+								$sql[] = $remote;
+								$par[] = $this->{$local};
+							}
+							foreach($v['pivot_keymap'] as $local => $remote) {
+								$sql[] = $local;
+								$par[] = isset($item[$remote]) ? $item[$remote] : null;
+							}
+							$que[] = ['INSERT INTO '.$v['pivot'].' ('.implode(', ', $sql).') VALUES('.implode(', ', array_fill(0, count($par), '?')).')', $par];
+						}
+
+						foreach($que as $sql) {
+							$this->table->getDatabase()->query($sql[0], $sql[1]);
+						}
+					}
+					else {
+						foreach($this->{$k}()->save() as $item) {
+							foreach($v['keymap'] as $local => $remote) {
+								if(isset($item[$remote])) {
+									$this->chng[$local] = $item[$remote];
+								}
+							}
+						}
 					}
 				}
 			}
@@ -179,96 +221,131 @@ class TableRow implements TableRowInterface
 				if(!$this->is_new) {
 					$col = [];
 					$par = [];
+					$idf = [];
 					foreach($this->chng as $k => $v) {
-						if(in_array($k, $this->tbl->getColumns())) {
+						if(in_array($k, $this->table->getColumns())) {
 							$col[] = $k. ' = ?';
 							$par[] = $v;
 						}
 					}
 					if(count($col)) {
-						$par[] = $this->orig_id !== null ? $this->orig_id : $fk;
-						$this->tbl->getDatabase()->query('UPDATE ' . $this->tbl->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE '.$this->tbl->getPrimaryKey().' = ?', $par);
+						foreach($this->table->getPrimaryKey() as $pk_field) {
+							$idf[] = $pk_field . ' = ? ';
+							$par[] = isset($this->original_id[$pk_field]) ? $this->original_id[$pk_field] : $fk[$pk_field];
+						}
+						$this->table->getDatabase()->query('UPDATE ' . $this->table->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE '.implode(' AND ', $idf), $par);
 					}
 				}
 				else {
 					$temp = [];
 					foreach($this->chng as $k => $v) {
-						if(in_array($k, $this->tbl->getColumns())) {
+						if(in_array($k, $this->table->getColumns())) {
 							$temp[$k] = $v;
 						}
 					}
 					if(!count($temp)) {
 						throw new ORMException('Nothing to insert');
 					}
-					$iid = $this->tbl->getDatabase()->query('INSERT INTO ' . $this->tbl->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
-					if($fk === null) {
-						$fk = $iid;
+					$iid = $this->table->getDatabase()->query('INSERT INTO ' . $this->table->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
+					if(count($fk) === 1 && current($fk) === null) {
+						$fk[key($fk)] = $iid;
 					}
 				}
 			}
-			// has relations
-			if($fk !== null) {
-				foreach($this->inst as $k => $v) {
+
+			// has relations (update if some of the local keys are part of the primary key)
+			foreach($this->relations as $k => $v) {
+				if(count(array_intersect($this->table->getPrimaryKey(), array_keys($v['keymap'])))) {
 					if($v['pivot']) {
-						$temp = $this->{$k}()->save();
-						$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$this->orig_id !== null ? $this->orig_id : $fk]);
-						foreach($temp as $id) {
-							$this->tbl->getDatabase()->query('INSERT INTO '.$v['pivot'].' ('.$v['local_key'].', '.$v['foreign_key'].') VALUES(?,?)', [$fk, $id]);
+						$sql = [];
+						$par = [];
+						$que = [];
+						foreach($v['keymap'] as $local => $remote) {
+							$sql[] = $remote . ' = ? ';
+							$par[] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
+						}
+						$que[] = ['DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par];
+						
+						foreach($this->{$k}()->save([], false) as $item) {
+							$sql = [];
+							$par = [];
+							foreach($v['keymap'] as $local => $remote) {
+								$sql[] = $remote;
+								$par[] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
+							}
+							foreach($v['pivot_keymap'] as $local => $remote) {
+								$sql[] = $local;
+								$par[] = isset($item[$remote]) ? $item[$remote] : null;
+							}
+							$que[] = ['INSERT INTO '.$v['pivot'].' ('.implode(', ', $sql).') VALUES('.implode(', ', array_fill(0, count($par), '?')).')', $par];
+						}
+
+						foreach($que as $sql) {
+							$this->table->getDatabase()->query($sql[0], $sql[1]);
 						}
 					}
 					else {
-						if($v['local_key'] === $pk) {
-							// set the foreign key on all rows in the collection to $fk
-							$temp = [];
-							$temp[$v['foreign_key']] = $fk;
-							$this->{$k}()->save($temp);
+						$data = [];
+						foreach($v['keymap'] as $local => $remote) {
+							$data[$remote] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
 						}
+						$this->{$k}()->save($data);
 					}
 				}
 			}
+
 			if(!$wasInTransaction) {
-				$this->tbl->getDatabase()->commit();
+				$this->table->getDatabase()->commit();
 			}
 			return $fk;
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->tbl->getDatabase()->rollback();
+				$this->table->getDatabase()->rollback();
 			}
 			throw $e;
 		}
 	}
 	public function delete() {
-		$wasInTransaction = $this->tbl->getDatabase()->isTransaction();
+		$wasInTransaction = $this->table->getDatabase()->isTransaction();
 		if(!$wasInTransaction) {
-			$this->tbl->getDatabase()->begin();
+			$this->table->getDatabase()->begin();
 		}
 		try {
-			$id = $this->tbl->getPrimaryKey();
-			$fk = $this->{$id};
+			$id = $this->table->getPrimaryKey();
+			$fk = $this->getID();
 
-			foreach($this->inst as $k => $v) {
-				if($v['pivot'] && $fk) {
-					$this->tbl->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . $v['local_key'] . ' = ?', [$fk]);
+			foreach($this->relations as $k => $v) {
+				if($v['pivot']) {
+					$sql = [];
+					$par = [];
+					foreach($v['keymap'] as $local => $remote) {
+						$sql[] = $remote . ' = ? ';
+						$par[] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
+					}
+					$this->table->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par);
 				}
 				else {
-					if($v['local_key'] === $id) {
-						foreach($this->{$k}() as $kk => $item) {
-							//unset($this->{$k}()[$kk]);
+					if($this->table->getPrimaryKey() == array_keys($v['keymap'])) {
+						foreach($this->{$k}() as $item) {
 							$item->delete();
 						}
 					}
 				}
 			}
 			if($fk) {
-				$this->tbl->getDatabase()->query('DELETE FROM ' . $this->tbl->getTableName() . ' WHERE '.$this->tbl->getPrimaryKey().' = ?', [ $fk ]);
+				$sql = [];
+				foreach($fk as $k => $v) {
+					$sql[] = $k . ' = ? ';
+				}
+				$this->table->getDatabase()->query('DELETE FROM ' . $this->table->getTableName() . ' WHERE '. implode(' AND ', $sql), $fk);
 			}
 			if(!$wasInTransaction) {
-				$this->tbl->getDatabase()->commit();
+				$this->table->getDatabase()->commit();
 			}
 			return $fk;
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->tbl->getDatabase()->rollback();
+				$this->table->getDatabase()->rollback();
 			}
 			throw $e;
 		}

@@ -118,7 +118,9 @@ class Result implements ResultInterface, \JsonSerializable
 			return isset($this->all[$offset]);
 		}
 		if($this->fake === null && $this->rslt->seekable()) {
-			$this->rslt->seek(($this->real_key = $offset));
+			if(!$this->rslt->seek(($this->real_key = $offset))) {
+				return false;
+			}
 			$this->rslt->nextr();
 			return $this->rslt->row() !== false && $this->rslt->row() !== null;
 		}
@@ -130,12 +132,14 @@ class Result implements ResultInterface, \JsonSerializable
 			return $this->all[$offset];
 		}
 		if($this->fake === null && $this->rslt->seekable()) {
-			$this->rslt->seek(($this->real_key = $offset));
+			if(!$this->rslt->seek(($this->real_key = $offset))) {
+				return null;
+			}
 			$this->rslt->nextr();
 			return $this->current();
 		}
 		$this->get();
-		return $this->all[$offset];
+		return isset($this->all[$offset]) ? $this->all[$offset] : null;
 	}
 	public function offsetSet ($offset, $value) {
 		throw new DatabaseException('Cannot set result');
