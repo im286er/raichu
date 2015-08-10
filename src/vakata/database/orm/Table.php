@@ -5,7 +5,7 @@ use vakata\database\DatabaseInterface;
 
 class Table implements TableInterface
 {
-	protected $db         = null;
+	protected $database   = null;
 	protected $table      = null;
 	protected $definition = null;
 	protected $relations  = [];
@@ -15,78 +15,25 @@ class Table implements TableInterface
 	protected $del        = [];
 
 	protected $result     = null;
-	protected $filter     = ['1=1'];
+	protected $filter     = [];
 	protected $params     = [];
 	protected $joined     = [];
+	protected $order      = null;
 
-	public function __construct(DatabaseInterface $db, $table, array $definition = null) {
-		$this->db         = $db;
+	public function __construct(DatabaseInterface $database, $table, TableDefinitionInterface $definition = null) {
+		$this->database   = $database;
 		$this->table      = $table;
-		$this->definition = isset($definition) ? $definition : $this->analyze();
+		$this->definition = isset($definition) ? $definition : new TableDefinition($this->database, $this->table);
 	}
 	public function __clone() {
 		$this->reset();
 	}
-	protected function analyze() {
-		$res = [ 'columns' => [], 'primary_key' => [], 'definitions' => [], 'indexed' => [] ];
-		switch($this->db->driver()) {
-			case 'mysql':
-			case 'mysqli':
-				foreach($this->db->all('SHOW FULL COLUMNS FROM '.$this->table) as $data) {
-					$res['columns'][] = $data['Field'];
-					$res['definitions'][$data['Field']] = $data;
-					if($data['Key'] == 'PRI') {
-						$res['primary_key'][] = $data['Field'];
-					}
-				}
-				foreach($this->db->all('SHOW INDEX FROM '.$this->table.' WHERE Index_type = \'FULLTEXT\'') as $data) {
-					$res['indexed'][] = $data['Column_name'];
-				}
-				$res['indexed'] = array_unique($res['indexed']);
-				break;
-			case 'postgre':
-			case 'oracle':
-				$res['definitions'] = $this->db->all('SELECT * FROM information_schema.columns WHERE table_name = ? ', [ $this->table ], 'column_name');
-				$res['columns'] = array_keys($res['definitions']);
-				$tmp = $this->db->one('SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = ? AND constraint_type = ?', [ $this->table, 'PRIMARY KEY' ]);
-				if($tmp) {
-					$res['primary_key'] = $this->db->all('SELECT column_name FROM information_schema.key_column_usage WHERE table_name = ? AND constraint_name = ?', [ $this->table, $tmp ]);
-				}
-				break;
-			default:
-				throw new ORMException('Driver is not supported: ' . $this->db->driver(), 500);
-		}
-		return $res;
-	}
 
 	public function getDatabase() {
-		return $this->db;
-	}
-	public function getTableName() {
-		return $this->table;
+		return $this->database;
 	}
 	public function getDefinition() {
 		return $this->definition;
-	}
-	public function getIndexed() {
-		return $this->definition['indexed'];
-	}
-	public function getSearchable() {
-		$temp = [];
-		if(isset($this->definition['like']) && is_array($this->definition['like'])) {
-			foreach($this->definition['like'] as $c) {
-				if(in_array($c, $this->definition['columns'])) {
-					$temp[] = $c;
-				}
-			}
-		}
-		return $temp;
-	}
-	public function getColumns() {
-		return $this->definition['columns'];
-	}
-	public function getPrimaryKey() {
-		return $this->definition['primary_key'];
 	}
 	public function &getRelations() {
 		return $this->relations;
@@ -94,7 +41,6 @@ class Table implements TableInterface
 	public function getRelationKeys() {
 		return array_keys($this->relations);
 	}
-
 
 	// relations
 	protected function getRelatedTable($to_table) {
@@ -126,7 +72,7 @@ class Table implements TableInterface
 	}
 	public function hasOne($to_table, $name = null, $to_table_column = null) {
 		$to_table = $this->getRelatedTable($to_table);
-		$columns = $to_table->getColumns();
+		$columns = $to_table->definition->getColumns();
 
 		$keymap = [];
 		if(!isset($to_table_column)) {
@@ -135,7 +81,7 @@ class Table implements TableInterface
 		if(!is_array($to_table_column)) {
 			$to_table_column = [ $to_table_column ];
 		}
-		foreach($this->getPrimaryKey() as $k => $pk_field) {
+		foreach($this->definition->getPrimaryKey() as $k => $pk_field) {
 			$key = null;
 			if(isset($to_table_column[$pk_field])) {
 				$key = $to_table_column[$pk_field];
@@ -144,7 +90,7 @@ class Table implements TableInterface
 				$key = $to_table_column[$k];
 			}
 			else {
-				$key = $this->getTableName() . '_' . $pk_field;
+				$key = $this->definition->getName() . '_' . $pk_field;
 			}
 			if(!in_array($key, $columns)) {
 				throw new ORMException('Missing foreign key mapping');
@@ -153,7 +99,7 @@ class Table implements TableInterface
 		}
 
 		if(!isset($name)) {
-			$name = $to_table->getTableName() . '_' . implode('_', array_keys($keymap));
+			$name = $to_table->definition->getName() . '_' . implode('_', array_keys($keymap));
 		}
 		$this->relations[$name] = [
 			'name'         => $name,
@@ -167,7 +113,7 @@ class Table implements TableInterface
 	}
 	public function hasMany($to_table, $name = null, $to_table_column = null) {
 		$to_table = $this->getRelatedTable($to_table);
-		$columns = $to_table->getColumns();
+		$columns = $to_table->definition->getColumns();
 
 		$keymap = [];
 		if(!isset($to_table_column)) {
@@ -176,7 +122,7 @@ class Table implements TableInterface
 		if(!is_array($to_table_column)) {
 			$to_table_column = [ $to_table_column ];
 		}
-		foreach($this->getPrimaryKey() as $k => $pk_field) {
+		foreach($this->definition->getPrimaryKey() as $k => $pk_field) {
 			$key = null;
 			if(isset($to_table_column[$pk_field])) {
 				$key = $to_table_column[$pk_field];
@@ -185,7 +131,7 @@ class Table implements TableInterface
 				$key = $to_table_column[$k];
 			}
 			else {
-				$key = $this->getTableName() . '_' . $pk_field;
+				$key = $this->definition->getName() . '_' . $pk_field;
 			}
 			if(!in_array($key, $columns)) {
 				throw new ORMException('Missing foreign key mapping');
@@ -194,7 +140,7 @@ class Table implements TableInterface
 		}
 
 		if(!isset($name)) {
-			$name = $to_table->getTableName() . '_' . implode('_', array_keys($keymap));
+			$name = $to_table->definition->getName() . '_' . implode('_', array_keys($keymap));
 		}
 		$this->relations[$name] = [
 			'name'         => $name,
@@ -208,7 +154,7 @@ class Table implements TableInterface
 	}
 	public function belongsTo($to_table, $name = null, $local_column = null) {
 		$to_table = $this->getRelatedTable($to_table);
-		$columns = $this->getColumns();
+		$columns = $this->definition->getColumns();
 
 		$keymap = [];
 		if(!isset($local_column)) {
@@ -217,7 +163,7 @@ class Table implements TableInterface
 		if(!is_array($local_column)) {
 			$local_column = [ $local_column ];
 		}
-		foreach($to_table->getPrimaryKey() as $k => $pk_field) {
+		foreach($to_table->definition->getPrimaryKey() as $k => $pk_field) {
 			$key = null;
 			if(isset($local_column[$pk_field])) {
 				$key = $local_column[$pk_field];
@@ -226,7 +172,7 @@ class Table implements TableInterface
 				$key = $local_column[$k];
 			}
 			else {
-				$key = $to_table->getTableName() . '_' . $pk_field;
+				$key = $to_table->definition->getName() . '_' . $pk_field;
 			}
 			if(!in_array($key, $columns)) {
 				throw new ORMException('Missing foreign key mapping');
@@ -235,7 +181,7 @@ class Table implements TableInterface
 		}
 
 		if(!isset($name)) {
-			$name = $to_table->getTableName() . '_' . implode('_', array_keys($keymap));
+			$name = $to_table->definition->getName() . '_' . implode('_', array_keys($keymap));
 		}
 		$this->relations[$name] = [
 			'name'         => $name,
@@ -251,9 +197,9 @@ class Table implements TableInterface
 		$to_table = $this->getRelatedTable($to_table);
 		$pt_table = $this->getRelatedTable($pivot);
 
-		$local_columns = $this->getColumns();
-		$pivot_columns = $pt_table->getColumns();
-		$related_columns = $to_table->getColumns();
+		$local_columns = $this->definition->getColumns();
+		$pivot_columns = $pt_table->definition->getColumns();
+		$related_columns = $to_table->definition->getColumns();
 
 		$keymap = [];
 		if(!isset($to_table_column)) {
@@ -262,7 +208,7 @@ class Table implements TableInterface
 		if(!is_array($to_table_column)) {
 			$to_table_column = [ $to_table_column ];
 		}
-		foreach($this->getPrimaryKey() as $k => $pk_field) {
+		foreach($this->definition->getPrimaryKey() as $k => $pk_field) {
 			$key = null;
 			if(isset($to_table_column[$pk_field])) {
 				$key = $to_table_column[$pk_field];
@@ -271,7 +217,7 @@ class Table implements TableInterface
 				$key = $to_table_column[$k];
 			}
 			else {
-				$key = $this->getTableName() . '_' . $pk_field;
+				$key = $this->definition->getName() . '_' . $pk_field;
 			}
 			if(!in_array($key, $pivot_columns)) {
 				throw new ORMException('Missing foreign key mapping');
@@ -286,7 +232,7 @@ class Table implements TableInterface
 		if(!is_array($local_column)) {
 			$local_column = [ $local_column ];
 		}
-		foreach($to_table->getPrimaryKey() as $k => $pk_field) {
+		foreach($to_table->definition->getPrimaryKey() as $k => $pk_field) {
 			$key = null;
 			if(isset($local_column[$pk_field])) {
 				$key = $local_column[$pk_field];
@@ -295,7 +241,7 @@ class Table implements TableInterface
 				$key = $local_column[$k];
 			}
 			else {
-				$key = $to_table->getTableName() . '_' . $pk_field;
+				$key = $to_table->definition->getName() . '_' . $pk_field;
 			}
 			if(!in_array($key, $pivot_columns)) {
 				throw new ORMException('Missing foreign key mapping');
@@ -304,7 +250,7 @@ class Table implements TableInterface
 		}
 
 		if(!isset($name)) {
-			$name = $to_table->getTableName() . '_' . implode('_', array_keys($keymap));
+			$name = $to_table->definition->getName() . '_' . implode('_', array_keys($keymap));
 		}
 		$this->relations[$name] = [
 			'name'         => $name,
@@ -317,85 +263,19 @@ class Table implements TableInterface
 		return $this;
 	}
 
-	public function search($term) {
-		if(count($this->getIndexed()) && is_string($term) && strlen($term) >= 4) {
-			$this->filter('MATCH ('.implode(', ', $this->getIndexed()).') AGAINST (?)', [$term]);
-		}
-		$like = $this->getSearchable();
-		if(count($like) && is_string($term) && strlen($term)) {
-			$term = '%' . str_replace(['%','_'], ['\\%', '\\_'], $term) . '%';
-			$sql = '';
-			$par = [];
-			foreach($like as $fd) {
-				$sql[] = $fd . ' LIKE ?';
-				$par[] = $term;
-			}
-			$this->filter('('.implode(' OR ', $sql).')', $par);
-		}
-		return $this;
-	}
-	public function filter($sql, array $params = []) {
-		$this->filter[] = '(' . $sql . ')';
-		$this->params = array_merge($this->params, array_values($params));
-		$this->result = null;
-		$this->ext = [];
-		return $this;
-	}
-
-	public function reset() {
-		$this->filter = ['1=1'];
-		$this->params = [];
-		$this->result = null;
-		$this->joined = [];
-		$this->ext = [];
-		$this->new = [];
-		$this->del = [];
-		return $this;
-	}
-
-	public function count() {
-		$sql = 'SELECT COUNT(DISTINCT t.' . implode(', t.', $this->getPrimaryKey()) . ') FROM ' . $this->getTableName() . ' AS t ';
-		foreach($this->joined as $k => $v) {
-			if($this->relations[$k]['pivot']) {
-				$sql .= 'LEFT JOIN ' . $this->relations[$k]['pivot'] . ' AS '.$k.'_pivot ON ';
-				$tmp = [];
-				foreach($this->relations[$k]['keymap'] as $kk => $vv) {
-					$tmp[] = 't.' . $kk . ' = ' . $k . '_pivot.' . $vv . ' ';
-				}
-				$sql .= implode(' AND ', $tmp);
-
-				$sql .= 'LEFT JOIN ' . $this->relations[$k]['table']->getTableName() . ' AS '.$k.' ON ';
-				$tmp = [];
-				foreach($this->relations[$k]['pivot_keymap'] as $kk => $vv) {
-					$tmp[] = $k . '.' . $vv . ' = ' . $k . '_pivot.' . $kk . ' ';
-				}
-				$sql .= implode(' AND ', $tmp);
-			}
-			else {
-				$sql .= $v . ' JOIN ' . $this->relations[$k]['table']->getTableName() . ' AS '.$k.' ON ';
-				$tmp = [];
-				foreach($this->relations[$k]['keymap'] as $kk => $vv) {
-					$tmp[] = 't.' . $kk . ' = ' . $k . '.' . $vv . ' ';
-				}
-				$sql .= implode(' AND ', $tmp);
-			}
-		}
-		$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
-		return $this->db->one($sql, $this->params);
-	}
-	public function select($order = null, $limit = 0, $offset = 0, array $fields = null) {
+	public function select($limit = 0, $offset = 0, array $fields = null) {
 		if($fields && count($fields)) {
 			$temp = [];
 			foreach($fields as $k => $v) {
 				if(!strpos($v, '.')) {
-					if(in_array($v, $this->getColumns()) || $v === '*') {
+					if(in_array($v, $this->definition->getColumns()) || $v === '*') {
 						$temp[] = 't.' . $v;
 					}
 				}
 				else {
 					if(preg_match('(^[a-z_0-9]+\.[a-z_0-9*]+$)i', $v)) {
 						$v = explode('.', $v, 2);
-						if(isset($this->relations[$v[0]]) && ($v[1] === '*' || in_array($v[1], $this->relations[$v[0]]['table']->getColumns()))) {
+						if(isset($this->relations[$v[0]]) && ($v[1] === '*' || in_array($v[1], $this->relations[$v[0]]['table']->definition->getColumns()))) {
 							$this->joined[$v[0]] = 'LEFT';
 							$temp[] = $v[1] === '*' ? implode('.', $v) : implode('.', $v) . ' AS ' . implode('___', $v);
 						}
@@ -406,7 +286,7 @@ class Table implements TableInterface
 		}
 		if(!$fields || !count($fields)) {
 			$fields = [];
-			foreach($this->getColumns() as $c) {
+			foreach($this->definition->getColumns() as $c) {
 				$fields[] = 't.'.$c;
 			}
 		}
@@ -421,7 +301,7 @@ class Table implements TableInterface
 				}
 				$sql .= implode(' AND ', $tmp);
 
-				$sql .= 'LEFT JOIN ' . $this->relations[$k]['table']->getTableName() . ' AS '.$k.' ON ';
+				$sql .= 'LEFT JOIN ' . $this->relations[$k]['table']->definition->getName() . ' AS '.$k.' ON ';
 				$tmp = [];
 				foreach($this->relations[$k]['pivot_keymap'] as $kk => $vv) {
 					$tmp[] = $k . '.' . $vv . ' = ' . $k . '_pivot.' . $kk . ' ';
@@ -429,7 +309,7 @@ class Table implements TableInterface
 				$sql .= implode(' AND ', $tmp);
 			}
 			else {
-				$sql .= $v . ' JOIN ' . $this->relations[$k]['table']->getTableName() . ' AS '.$k.' ON ';
+				$sql .= $v . ' JOIN ' . $this->relations[$k]['table']->definition->getName() . ' AS '.$k.' ON ';
 				$tmp = [];
 				foreach($this->relations[$k]['keymap'] as $kk => $vv) {
 					$tmp[] = 't.' . $kk . ' = ' . $k . '.' . $vv . ' ';
@@ -438,12 +318,14 @@ class Table implements TableInterface
 			}
 		}
 
-		$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
-		if(count($this->joined)) {
-			$sql .= 'GROUP BY t.' . implode(', t.', $this->getPrimaryKey()) . ' ';
+		if(count($this->filter)) {
+			$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
 		}
-		if($order) {
-			$sql .= 'ORDER BY ' . $order . ' ';
+		if(count($this->joined)) {
+			$sql .= 'GROUP BY t.' . implode(', t.', $this->definition->getPrimaryKey()) . ' ';
+		}
+		if($this->order) {
+			$sql .= 'ORDER BY ' . $this->order . ' ';
 		}
 		if((int)$limit) {
 			$sql .= 'LIMIT ' . (int)$limit . ' ';
@@ -451,90 +333,139 @@ class Table implements TableInterface
 		if((int)$limit && (int)$offset) {
 			$sql .= 'OFFSET ' . (int)$offset;
 		}
-		$this->result = $this->db->get($sql, $this->params, null, false, 'assoc', false);
+		$this->result = $this->database->get($sql, $this->params, null, false, 'assoc', false);
 		$this->ext = [];
 		return $this;
 	}
+	public function where($sql, array $params = []) {
+		$this->filter[] = '(' . $sql . ')';
+		$this->params = array_merge($this->params, array_values($params));
+		$this->result = null;
+		$this->ext = [];
+		return $this;
+	}
+	public function order($order, $raw = false) {
+		if($raw) {
+			$this->order = $order;
+			return $this;
+		}
 
-	public function read($settings = null) {
-		// TODO - maybe single() method? :
-		//if(isset($settings) && is_numeric($settings)) {
-		//	return $this->filter($this->pk . ' = ' . (int)$settings)->select();
-		//}
-		$settings = array_merge([
-			'l' => null,
-			'p' => 0,
-			'o' => null,
-			'd' => 0,
-			'q' => '',
-			'f' => '*'
-		], isset($settings) && is_array($settings) ? $settings : []);
-		$fields = is_array($settings['f']) ? $settings['f'] : [ $settings['f'] ];
-		$order = null;
-		$limit = 0;
-		$offset = 0;
-		if(isset($settings['o'])) {
-			if(in_array($settings['o'], $this->getColumns())) {
-				$order = $settings['o'] . ' ' . (isset($settings['d']) && (int)$settings['d'] ? 'DESC' : 'ASC');
-			}
-			if(strpos($settings['o'], '.')) {
-				$temp = explode('.', $settings['o'], 2);
-				if(isset($this->relations[$temp[0]]) && in_array($temp[1], $this->relations[$temp[0]]['table']->getColumns())) {
-					$this->joined[$temp[0]] = 'LEFT';
-					$order = $settings['o'] . ' ' . (isset($settings['d']) && (int)$settings['d'] ? 'DESC' : 'ASC');
-				}
-			}
+		if(!is_array($field)) {
+			$field = explode(',', $field);
 		}
-		if(isset($settings['l']) && (int)$settings['l']) {
-			$limit = (int)$settings['l'];
-			if(isset($settings['p'])) {
-				$offset = (int)$settings['p'] * $limit;
+		$field = array_map('trim', $field);
+
+		$temp = [];
+		foreach($field as $f) {
+			$f = explode(' ', $f, 2);
+			$f = array_map('trim', $f);
+			if(!isset($f[1]) || !in_array($f[1], ['asc','desc','ASC','DESC'])) {
+				$f[1] = 'ASC';
 			}
-		}
-		if(isset($settings['q'])) {
-			$this->search($settings['q']);
-		}
-		// filter on local columns
-		foreach($this->getColumns() as $column) {
-			if(isset($settings[$column])) {
-				if(!is_array($settings[$column])) {
-					$this->filter($column . ' = ?', [$settings[$column]]);
-					continue;
-				}
-				if(isset($settings[$column]['beg']) && isset($settings[$column]['end'])) {
-					$this->filter($column . ' BETWEEN ? AND ?', [ $settings[$column]['beg'], $settings[$column]['end'] ]);
-					continue;
-				}
-				if(count($settings[$column])) {
-					$this->filter($column . ' IN ('.implode(',', array_fill(0, count($settings[$column]), '?')).')', $settings['column']);
-					continue;
-				}
-			}
-		}
-		// filter on remote columns
-		foreach($settings as $column => $filter) {
-			if(!strpos($column, '.') || !preg_match('(^[a-z_0-9]+\.[a-z_0-9]+$)i', $column)) {
+			if(in_array($f[0], $this->definition->getColumns())) {
+				$temp[] = $f[0] . ' ' . $f[1];
 				continue;
 			}
-
-			$temp = explode('.', $column, 2);
-			if(isset($this->relations[$temp[0]]) && in_array($temp[1], $this->relations[$temp[0]]['table']->getColumns())) {
-				$this->joined[$temp[0]] = 'INNER';
-				if(!is_array($settings[$column])) {
-					$this->filter($column . ' = ?', [$settings[$column]]);
-					continue;
-				}
-				if(isset($settings[$column]['beg']) && isset($settings[$column]['end'])) {
-					$this->filter($column . ' BETWEEN ? AND ?', [ $settings[$column]['beg'], $settings[$column]['end'] ]);
-					continue;
-				}
-				if(count($settings[$column])) {
-					$this->filter($column . ' IN ('.implode(',', array_fill(0, count($settings[$column]), '?')).')', $settings['column']);
-					continue;
+			if(strpos($f[0], '.')) {
+				$t = explode('.', $f[0], 2);
+				if(isset($this->relations[$t[0]]) && in_array($t[1], $this->relations[$t[0]]['table']->definition->getColumns())) {
+					$this->joined[$t[0]] = 'LEFT';
+					$temp[] = $f[0] . ' ' . $f[1];
 				}
 			}
 		}
-		return $this->select($order, $limit, $offset, $fields);
+		$this->order = implode(', ', $temp);
+		return $this;
+	}
+
+	public function search($term) {
+		$sql = [];
+		$par = [];
+		if(count($this->definition->getIndexed()) && is_string($term) && strlen($term) >= 4) {
+			$sql[] = 'MATCH ('.implode(', ', $this->definition->getIndexed()).') AGAINST (?)';
+			$par[] = $term;
+		}
+		$like = $this->definition->getSearchable();
+		if(count($like) && is_string($term) && strlen($term)) {
+			$term = '%' . str_replace(['%','_'], ['\\%', '\\_'], $term) . '%';
+			foreach($like as $fd) {
+				$sql[] = $fd . ' LIKE ?';
+				$par[] = $term;
+			}
+			
+		}
+		if(count($sql)) {
+			$this->where('('.implode(' OR ', $sql).')', $par);
+		}
+		return $this;
+	}
+	public function filter($column, $value) {
+		$column = explode('.', $column, 2);
+		if(count($column) === 1 && in_array($column[0], $this->definition->getColumns())) {
+			$column = 't.' . $column[0];
+		}
+		else if (count($column) === 2 && isset($this->relations[$column[0]]) && in_array($column[1], $this->relations[$column[0]]['table']->definition->getColumns())) {
+			$this->joined[$column[0]] = 'LEFT';
+			$column = implode('.', $column);
+		}
+		else {
+			throw new ORMException('Invalid column: ' . implode('.', $column));
+		}
+		
+		if(!is_array($value)) {
+			return $this->where($column . ' = ?', [$value]);
+		}
+		if(isset($value['beg']) && isset($value['end'])) {
+			return $this->where($column . ' BETWEEN ? AND ?', [ $value['beg'], $value['end'] ]);
+		}
+		if(count($settings[$column])) {
+			return $this->where($column . ' IN ('.implode(',', array_fill(0, count($value), '?')).')', $value);
+		}
+		return $this;
+	}
+
+	public function count() {
+		$sql = 'SELECT COUNT(DISTINCT t.' . implode(', t.', $this->definition->getPrimaryKey()) . ') FROM ' . $this->definition->getName() . ' AS t ';
+		foreach($this->joined as $k => $v) {
+			if($this->relations[$k]['pivot']) {
+				$sql .= 'LEFT JOIN ' . $this->relations[$k]['pivot'] . ' AS '.$k.'_pivot ON ';
+				$tmp = [];
+				foreach($this->relations[$k]['keymap'] as $kk => $vv) {
+					$tmp[] = 't.' . $kk . ' = ' . $k . '_pivot.' . $vv . ' ';
+				}
+				$sql .= implode(' AND ', $tmp);
+
+				$sql .= 'LEFT JOIN ' . $this->relations[$k]['table']->definition->getName() . ' AS '.$k.' ON ';
+				$tmp = [];
+				foreach($this->relations[$k]['pivot_keymap'] as $kk => $vv) {
+					$tmp[] = $k . '.' . $vv . ' = ' . $k . '_pivot.' . $kk . ' ';
+				}
+				$sql .= implode(' AND ', $tmp);
+			}
+			else {
+				$sql .= $v . ' JOIN ' . $this->relations[$k]['table']->definition->getName() . ' AS '.$k.' ON ';
+				$tmp = [];
+				foreach($this->relations[$k]['keymap'] as $kk => $vv) {
+					$tmp[] = 't.' . $kk . ' = ' . $k . '.' . $vv . ' ';
+				}
+				$sql .= implode(' AND ', $tmp);
+			}
+		}
+		if(count($this->filter)) {
+			$sql .= 'WHERE ' . implode(' AND ', $this->filter) . ' ';
+		}
+		return $this->database->one($sql, $this->params);
+	}
+	public function reset() {
+		$this->filter = [];
+		$this->params = [];
+		$this->result = null;
+		$this->joined = [];
+		$this->order  = null;
+		$this->ext = [];
+		$this->new = [];
+		$this->del = [];
+		return $this;
 	}
 
 	// row processing
@@ -647,16 +578,16 @@ class Table implements TableInterface
 		return $this->toArray();
 	}
 
-	// MODIFIERS
-	public function create(array $data) {
+	// modifiers
+	public function create(array $data = []) {
 		$temp = new TableRow(clone $this, [], true);
 		$temp->fromArray($data);
 		return $this->new[] = $temp;
 	}
 	public function save(array $data = [], $delete = true) {
-		$wasInTransaction = $this->db->isTransaction();
+		$wasInTransaction = $this->database->isTransaction();
 		if(!$wasInTransaction) {
-			$this->db->begin();
+			$this->database->begin();
 		}
 		try {
 			$ret = [];
@@ -680,31 +611,31 @@ class Table implements TableInterface
 				unset($ret[md5(serialize($ids))]);
 			}
 			if(!$wasInTransaction) {
-				$this->db->commit();
+				$this->database->commit();
 			}
 			return $ret;
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->db->rollback();
+				$this->database->rollback();
 			}
 			throw $e;
 		}
 	}
 	public function delete() {
-		$wasInTransaction = $this->db->isTransaction();
+		$wasInTransaction = $this->database->isTransaction();
 		if(!$wasInTransaction) {
-			$this->db->begin();
+			$this->database->begin();
 		}
 		try {
 			foreach($this as $temp) {
 				$temp->delete();
 			}
 			if(!$wasInTransaction) {
-				$this->db->commit();
+				$this->database->commit();
 			}
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->db->rollback();
+				$this->database->rollback();
 			}
 			throw $e;
 		}

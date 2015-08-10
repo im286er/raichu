@@ -6,6 +6,8 @@ use vakata\dabatase\DatabaseException;
 class TableRow implements TableRowInterface
 {
 	protected $table       = null;
+	protected $database    = null;
+	protected $definition  = null;
 	protected $relations   = [];
 
 	protected $is_new      = false;
@@ -15,11 +17,14 @@ class TableRow implements TableRowInterface
 	protected $chng   = [];
 	protected $cche   = [];
 
-
 	public function __construct(TableInterface $table, array $data = [], $is_new = false) {
-		$this->table = $table;
+		$this->table		= $table;
+		$this->database		= $table->getDatabase();
+		$this->definition	= $table->getDefinition();
+		$this->relations	= $table->getRelations();
+
 		$this->is_new = $is_new;
-		foreach($this->table->getColumns() as $column) {
+		foreach($this->definition->getColumns() as $column) {
 			if(isset($data[$column])) {
 				$this->data[$column] = $data[$column];
 			}
@@ -30,32 +35,11 @@ class TableRow implements TableRowInterface
 				$this->data[str_replace('___', '.', $k)] = $v;
 			}
 		}
-		
-		$this->relations = $this->table->getRelations();
-	}
-
-	public function getTableName() {
-		return $this->table->getTableName();
-	}
-	public function getIndexed() {
-		return $this->table->getIndexed();
-	}
-	public function getColumns() {
-		return $this->table->getColumns();
-	}
-	public function getPrimaryKey() {
-		return $this->table->getPrimaryKey();
-	}
-	public function getRelationKeys() {
-		return $this->table->getRelationKeys();
-	}
-	public function getRelations() {
-		return $this->relations;
 	}
 
 	public function getID() {
 		$temp = [];
-		foreach($this->table->getPrimaryKey() as $pk_field) {
+		foreach($this->definition->getPrimaryKey() as $pk_field) {
 			$temp[$pk_field] = $this->{$pk_field};
 		}
 		return $temp;
@@ -100,15 +84,15 @@ class TableRow implements TableRowInterface
 				$par[] = $this->{$k};
 			}
 			$sql .= implode(' AND ', $tmp);
-			$ids = $this->table->getDatabase()->all($sql, $par);
+			$ids = $this->database->all($sql, $par);
 
 			if(!count($ids)) {
-				return $this->cche[$ckey] = $table->filter('1 = 0')->read();
+				return $this->cche[$ckey] = $table->where('1 = 0')->select();
 			}
-			return $this->cche[$ckey] = $table->filter(
+			return $this->cche[$ckey] = $table->where(
 				' (' . implode(',', $relation['pivot_keymap']) . ') IN ('.implode(',', array_fill(0, count($ids), (count($relation['pivot_keymap']) === 1 ? '?' : '('.implode(',', array_fill(0, count($relations['pivot_keymap']), '?')).')'))).')',
 				count($relation['pivot_keymap']) === 1 ? $ids : call_user_func_array('array_merge', $ids)
-			)->read(isset($args[0]) ? $args[0] : []);
+			)->select();
 		}
 		$sql = [];
 		$par = [];
@@ -116,7 +100,7 @@ class TableRow implements TableRowInterface
 			$sql[] = ' ' . $v . ' = ? ';
 			$par[] = $this->{$k};
 		}
-		return $this->cche[$ckey] = $table->filter(implode(' AND ', $sql), $par)->read(isset($args[0]) ? $args[0] : []);
+		return $this->cche[$ckey] = $table->where(implode(' AND ', $sql), $par)->select();
 	}
 
 	public function toArray($full = true) {
@@ -143,7 +127,7 @@ class TableRow implements TableRowInterface
 		}
 	}
 	public function __set($key, $value) {
-		if(in_array($key, $this->table->getColumns()) && (isset($this->chng[$key]) || !isset($this->data[$key]) || $this->data[$key] !== $value)) {
+		if(in_array($key, $this->definition->getColumns()) && (isset($this->chng[$key]) || !isset($this->data[$key]) || $this->data[$key] !== $value)) {
 			$this->chng[$key] = $value;
 		}
 		if(isset($this->relations[$key])) {
@@ -159,14 +143,14 @@ class TableRow implements TableRowInterface
 		}
 	}
 
-	// MODIFIERS - TODO: use relation collection SAVE method, take care when deleting, get full nodes back from SAVE
+	// modifiers
 	public function save() {
-		$wasInTransaction = $this->table->getDatabase()->isTransaction();
+		$wasInTransaction = $this->database->isTransaction();
 		if(!$wasInTransaction) {
-			$this->table->getDatabase()->begin();
+			$this->database->begin();
 		}
 		try {
-			$pk = $this->table->getPrimaryKey();
+			$pk = $this->definition->getPrimaryKey();
 			$fk = $this->getID();
 
 			if(!$this->is_new) {
@@ -175,7 +159,7 @@ class TableRow implements TableRowInterface
 
 			// belongs relations (update if none of the local keys are part of the primary key)
 			foreach($this->relations as $k => $v) {
-				if(!count(array_intersect($this->table->getPrimaryKey(), array_keys($v['keymap'])))) {
+				if(!count(array_intersect($this->definition->getPrimaryKey(), array_keys($v['keymap'])))) {
 					if($v['pivot']) {
 						$sql = [];
 						$par = [];
@@ -201,7 +185,7 @@ class TableRow implements TableRowInterface
 						}
 
 						foreach($que as $sql) {
-							$this->table->getDatabase()->query($sql[0], $sql[1]);
+							$this->database->query($sql[0], $sql[1]);
 						}
 					}
 					else {
@@ -223,30 +207,30 @@ class TableRow implements TableRowInterface
 					$par = [];
 					$idf = [];
 					foreach($this->chng as $k => $v) {
-						if(in_array($k, $this->table->getColumns())) {
+						if(in_array($k, $this->definition->getColumns())) {
 							$col[] = $k. ' = ?';
 							$par[] = $v;
 						}
 					}
 					if(count($col)) {
-						foreach($this->table->getPrimaryKey() as $pk_field) {
+						foreach($this->definition->getPrimaryKey() as $pk_field) {
 							$idf[] = $pk_field . ' = ? ';
 							$par[] = isset($this->original_id[$pk_field]) ? $this->original_id[$pk_field] : $fk[$pk_field];
 						}
-						$this->table->getDatabase()->query('UPDATE ' . $this->table->getTableName() . ' SET ' . implode(', ', $col) . ' WHERE '.implode(' AND ', $idf), $par);
+						$this->database->query('UPDATE ' . $this->definition->getName() . ' SET ' . implode(', ', $col) . ' WHERE '.implode(' AND ', $idf), $par);
 					}
 				}
 				else {
 					$temp = [];
 					foreach($this->chng as $k => $v) {
-						if(in_array($k, $this->table->getColumns())) {
+						if(in_array($k, $this->definition->getColumns())) {
 							$temp[$k] = $v;
 						}
 					}
 					if(!count($temp)) {
 						throw new ORMException('Nothing to insert');
 					}
-					$iid = $this->table->getDatabase()->query('INSERT INTO ' . $this->table->getTableName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
+					$iid = $this->database->query('INSERT INTO ' . $this->definition->getName() . ' ('.implode(', ', array_keys($temp)).') VALUES ('.implode(', ', array_fill(0, count($temp), '?')).')', array_values($temp))->insertId();
 					if(count($fk) === 1 && current($fk) === null) {
 						$fk[key($fk)] = $iid;
 					}
@@ -255,7 +239,7 @@ class TableRow implements TableRowInterface
 
 			// has relations (update if some of the local keys are part of the primary key)
 			foreach($this->relations as $k => $v) {
-				if(count(array_intersect($this->table->getPrimaryKey(), array_keys($v['keymap'])))) {
+				if(count(array_intersect($this->definition->getPrimaryKey(), array_keys($v['keymap'])))) {
 					if($v['pivot']) {
 						$sql = [];
 						$par = [];
@@ -281,7 +265,7 @@ class TableRow implements TableRowInterface
 						}
 
 						foreach($que as $sql) {
-							$this->table->getDatabase()->query($sql[0], $sql[1]);
+							$this->database->query($sql[0], $sql[1]);
 						}
 					}
 					else {
@@ -295,23 +279,23 @@ class TableRow implements TableRowInterface
 			}
 
 			if(!$wasInTransaction) {
-				$this->table->getDatabase()->commit();
+				$this->database->commit();
 			}
 			return $fk;
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->table->getDatabase()->rollback();
+				$this->database->rollback();
 			}
 			throw $e;
 		}
 	}
 	public function delete() {
-		$wasInTransaction = $this->table->getDatabase()->isTransaction();
+		$wasInTransaction = $this->database->isTransaction();
 		if(!$wasInTransaction) {
-			$this->table->getDatabase()->begin();
+			$this->database->begin();
 		}
 		try {
-			$id = $this->table->getPrimaryKey();
+			$id = $this->definition->getPrimaryKey();
 			$fk = $this->getID();
 
 			foreach($this->relations as $k => $v) {
@@ -322,10 +306,10 @@ class TableRow implements TableRowInterface
 						$sql[] = $remote . ' = ? ';
 						$par[] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
 					}
-					$this->table->getDatabase()->query('DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par);
+					$this->database->query('DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par);
 				}
 				else {
-					if($this->table->getPrimaryKey() == array_keys($v['keymap'])) {
+					if($this->definition->getPrimaryKey() == array_keys($v['keymap'])) {
 						foreach($this->{$k}() as $item) {
 							$item->delete();
 						}
@@ -337,15 +321,15 @@ class TableRow implements TableRowInterface
 				foreach($fk as $k => $v) {
 					$sql[] = $k . ' = ? ';
 				}
-				$this->table->getDatabase()->query('DELETE FROM ' . $this->table->getTableName() . ' WHERE '. implode(' AND ', $sql), $fk);
+				$this->database->query('DELETE FROM ' . $this->definition->getName() . ' WHERE '. implode(' AND ', $sql), $fk);
 			}
 			if(!$wasInTransaction) {
-				$this->table->getDatabase()->commit();
+				$this->database->commit();
 			}
 			return $fk;
 		} catch (DatabaseException $e) {
 			if(!$wasInTransaction) {
-				$this->table->getDatabase()->rollback();
+				$this->database->rollback();
 			}
 			throw $e;
 		}
