@@ -51,6 +51,9 @@ class Table implements TableInterface
 			if(!isset($to_table['definition'])) {
 				$to_table['definition'] = null;
 			}
+			if(is_array($to_table['definition'])) {
+				$to_table['definition'] = new TableDefinitionArray($to_table['table'], $to_table['definition']);
+			}
 			$to_table = new Table($this->getDatabase(), $to_table['table'], $to_table['definition']);
 		}
 		return $to_table;
@@ -350,13 +353,13 @@ class Table implements TableInterface
 			return $this;
 		}
 
-		if(!is_array($field)) {
-			$field = explode(',', $field);
+		if(!is_array($order)) {
+			$order = explode(',', $order);
 		}
-		$field = array_map('trim', $field);
+		$order = array_map('trim', $order);
 
 		$temp = [];
-		foreach($field as $f) {
+		foreach($order as $f) {
 			$f = explode(' ', $f, 2);
 			$f = array_map('trim', $f);
 			if(!isset($f[1]) || !in_array($f[1], ['asc','desc','ASC','DESC'])) {
