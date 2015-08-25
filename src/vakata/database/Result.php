@@ -134,7 +134,6 @@ class Result implements ResultInterface, \JsonSerializable
 			if($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
 				return null;
 			}
-			$this->rslt->nextr();
 			return $this->current();
 		}
 		$this->get();
