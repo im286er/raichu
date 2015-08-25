@@ -118,10 +118,9 @@ class Result implements ResultInterface, \JsonSerializable
 			return isset($this->all[$offset]);
 		}
 		if($this->fake === null && $this->rslt->seekable()) {
-			if(!$this->rslt->seek(($this->real_key = $offset))) {
+			if($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
 				return false;
 			}
-			$this->rslt->nextr();
 			return $this->rslt->row() !== false && $this->rslt->row() !== null;
 		}
 		$this->get();
@@ -132,7 +131,7 @@ class Result implements ResultInterface, \JsonSerializable
 			return $this->all[$offset];
 		}
 		if($this->fake === null && $this->rslt->seekable()) {
-			if(!$this->rslt->seek(($this->real_key = $offset))) {
+			if($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
 				return null;
 			}
 			$this->rslt->nextr();

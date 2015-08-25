@@ -179,7 +179,7 @@ class Mysqli extends AbstractDriver
 		return $tmp;
 	}
 	public function seek($result, $row) {
-		return $result->data_seek($row);
+		return $result->data_seek($row) !== false;
 	}
 	public function count($result) {
 		return $result->num_rows;
