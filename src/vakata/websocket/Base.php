@@ -30,7 +30,7 @@ abstract class Base
 	public function receive(&$socket, $decode = true) {
 		if(!$decode) {
 			$data = '';
-			$read = self::$fragment_size;
+			$read = static::$fragment_size;
 			do {
 				$buff = fread($socket, $read);
 				if($buff === false) {
@@ -38,7 +38,7 @@ abstract class Base
 				}
 				$data .= $buff;
 				$meta = stream_get_meta_data($socket);
-				$read = min((int)$meta['unread_bytes'], self::$fragment_size);
+				$read = min((int)$meta['unread_bytes'], static::$fragment_size);
 				usleep(1000);
 			} while (!feof($socket) && (int)$meta['unread_bytes'] > 0);
 			return $data;
@@ -98,7 +98,7 @@ abstract class Base
 		$head  = '';
 		$head .= (bool)$final ? '1' : '0';
 		$head .= '000';
-		$head .= sprintf('%04b', self::$opcodes[$opcode]);
+		$head .= sprintf('%04b', static::$opcodes[$opcode]);
 		$head .= (bool)$masked ? '1' : '0';
 		if($length > 65535) {
 			$head .= decbin(127);
@@ -161,11 +161,11 @@ abstract class Base
 			$data = '';
 			$buff = '';
 			do {
-				$read = @socket_recv($socket, $buff, self::$fragment_size, 0);
+				$read = @socket_recv($socket, $buff, static::$fragment_size, 0);
 				if(!$read) { return false; }
 				$data .= $temp;
 				usleep(1000);
-			} while ($read === self::$fragment_size);
+			} while ($read === static::$fragment_size);
 			return $data;
 		}
 
@@ -223,7 +223,7 @@ abstract class Base
 		$head  = '';
 		$head .= (bool)$final ? '1' : '0';
 		$head .= '000';
-		$head .= sprintf('%04b', self::$opcodes[$opcode]);
+		$head .= sprintf('%04b', static::$opcodes[$opcode]);
 		$head .= (bool)$masked ? '1' : '0';
 		if($length > 65535) {
 			$head .= decbin(127);

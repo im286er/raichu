@@ -55,7 +55,7 @@ class Random
 			$result ^= hash_hmac('sha512', $seeds[$i], $seeds[$i - 1], true);
 		}
 		while(strlen($result) < $length) {
-			$result .= self::generate();
+			$result .= static::generate();
 		}
 		if(strlen($result) > $length) {
 			$result = substr($result, 0, $length);
@@ -63,7 +63,7 @@ class Random
 		return $result;
 	}
 	public static function string($length = 32, $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') {
-		$rand = self::generate($length * 2);
+		$rand = static::generate($length * 2);
 		$lngt = mb_strlen($characters, 'UTF-8');
 		$rslt = '';
 		for($i = 0; $i < strlen($rand); $i++) {
@@ -73,7 +73,7 @@ class Random
 	}
 	public static function number($min = 0, $max = PHP_INT_MAX) {
 		if($max === $min) { return $max; }
-		$rand = self::generate(4);
+		$rand = static::generate(4);
 		$rand = hexdec(bin2hex($rand));
 		return $min + abs($rand % ($max - $min + 1));
 	}
