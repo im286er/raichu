@@ -15,7 +15,7 @@ class Paypal extends AbstractPayment
 			),
 			$options
 		);
-		if($options['test']) {
+		if ($options['test']) {
 			$options['url'] = 'https://api-3t.sandbox.paypal.com/nvp/';
 		}
 		$this->options = $options;
@@ -33,7 +33,7 @@ class Paypal extends AbstractPayment
 			$options
 		);
 		$data = array(
-			'USER'								=> $this->options['username'], 
+			'USER'								=> $this->options['username'],
 			'PWD'								=> $this->options['password'],
 			'VERSION'							=> '119.0',
 			'SIGNATURE'							=> $this->options['signature'],
@@ -51,11 +51,11 @@ class Paypal extends AbstractPayment
 
 		$data = $this->post($this->options['url'], $data);
 
-		if(!$data) {
+		if (!$data) {
 			$this->redirect($options['cancel_url']);
 		}
 		parse_str($data, $data);
-		if($data['ACK'] != 'Success') {
+		if ($data['ACK'] != 'Success') {
 			$this->redirect($options['cancel_url']);
 		}
 		else {
@@ -66,16 +66,16 @@ class Paypal extends AbstractPayment
 		}
 	}
 	public function ipn(callable $c = null) {
-		while(ob_get_level()) { ob_end_clean(); }
+		while (ob_get_level()) { ob_end_clean(); }
 		$url = $this->options['test'] ? 'https://www.sandbox.paypal.com/cgi-bin/webscr' : 'https://www.paypal.com/cgi-bin/webscr';
 
-		if(isset($_POST) && is_array($_POST) && count($_POST)) {
+		if (isset($_POST) && is_array($_POST) && count($_POST)) {
 			$res = $this->post($url, 'cmd=_notify-validate&' . file_get_contents('php://input'));
-			if($res && strpos($res,'VERIFIED') !== false && $_POST['receiver_email'] === $this->options['email']) {
+			if ($res && strpos($res,'VERIFIED') !== false && $_POST['receiver_email'] === $this->options['email']) {
 				$is_test = (isset($_POST['test_ipn']) && $_POST['test_ipn'] == 1);
-				if($is_test === $this->options['test']) {
-					if(in_array($_POST['payment_status'], array('Completed','Voided','Expired','Reversed'))) {
-						if($c) {
+				if ($is_test === $this->options['test']) {
+					if (in_array($_POST['payment_status'], array('Completed','Voided','Expired','Reversed'))) {
+						if ($c) {
 							// test for duplicate txn_id
 							// $_POST['mc_gross'], $_POST['mc_currency']
 							call_user_func($c, $_POST['invoice'], $_POST['payment_status'] === 'Completed');

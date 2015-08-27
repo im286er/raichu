@@ -13,16 +13,16 @@ class DB implements DatabaseInterface
 	 * @param  mixed      $drv Инстанция на драйвър или connection string, а ако не е подадено се използва константата DATABASE
 	 */
 	public function __construct($drv = null) {
-		if(!$drv && defined('DATABASE')) {
+		if (!$drv && defined('DATABASE')) {
 			$drv = DATABASE;
 		}
-		if(!$drv) {
+		if (!$drv) {
 			throw new DatabaseException('Could not create database (no settings)');
 		}
-		if(is_string($drv)) {
+		if (is_string($drv)) {
 			$drv = new Settings($drv);
 		}
-		if($drv instanceof Settings) {
+		if ($drv instanceof Settings) {
 			try {
 				$tmp = '\\vakata\\database\\driver\\' . ucfirst($drv->type);
 				$drv = new $tmp($drv);
@@ -30,7 +30,7 @@ class DB implements DatabaseInterface
 				throw new DatabaseException('Could not create database driver - ' . $e);
 			}
 		}
-		if(!($drv instanceof driver\DriverInterface)) {
+		if (!($drv instanceof driver\DriverInterface)) {
 			throw new DatabaseException('Invalid database driver');
 		}
 		$this->drv = $drv;
@@ -83,7 +83,7 @@ class DB implements DatabaseInterface
 	 * @method get
 	 * @param  string  $sql      SQL заявка
 	 * @param  array   $data     Параметри за изпълнението
-	 * @param  string  $key      Ключ за резултатния масив (ако искаме можем да използваме някоя от колоните за ключ) 
+	 * @param  string  $key      Ключ за резултатния масив (ако искаме можем да използваме някоя от колоните за ключ)
 	 * @param  boolean $skip_key Ако сме използвали колона за ключ можем да не я включим в списъка със стойности (по подразбиране е изключено)
 	 * @param  string  $mode     Режим на извличане - по подразбиране е "assoc" но може да се подаде "num"
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
@@ -97,7 +97,7 @@ class DB implements DatabaseInterface
 	 * @method all
 	 * @param  string  $sql      SQL заявка
 	 * @param  array   $data     Параметри за изпълнението
-	 * @param  string  $key      Ключ за резултатния масив (ако искаме можем да използваме някоя от колоните за ключ) 
+	 * @param  string  $key      Ключ за резултатния масив (ако искаме можем да използваме някоя от колоните за ключ)
 	 * @param  boolean $skip_key Ако сме използвали колона за ключ можем да не я включим в списъка със стойности (по подразбиране е изключено)
 	 * @param  string  $mode     Режим на извличане - по подразбиране е "assoc" но може да се подаде "num"
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
@@ -169,7 +169,7 @@ class DB implements DatabaseInterface
 	}
 
 	public function __call($method, $args) {
-		if($this->rsl && is_callable(array($this->rsl, $method))) {
+		if ($this->rsl && is_callable(array($this->rsl, $method))) {
 			try {
 				return call_user_func_array(array($this->rsl, $method), $args);
 			} catch (\Exception $e) {

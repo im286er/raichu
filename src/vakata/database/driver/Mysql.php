@@ -8,12 +8,12 @@ class Mysql extends AbstractDriver
 	protected $aff = 0;
 	public function __construct($settings) {
 		parent::__construct($settings);
-		if(!$this->settings->serverport) {
+		if (!$this->settings->serverport) {
 			$this->settings->serverport = 3306;
 		}
 	}
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$this->lnk = ($this->settings->persist) ?
 					@mysql_pconnect(
 									$this->settings->servername.':'.$this->settings->serverport,
@@ -26,16 +26,16 @@ class Mysql extends AbstractDriver
 									$this->settings->password
 					);
 
-			if($this->lnk === false || !mysql_select_db($this->settings->database, $this->lnk) || !mysql_query("SET NAMES '".$this->settings->charset."'", $this->lnk)) {
+			if ($this->lnk === false || !mysql_select_db($this->settings->database, $this->lnk) || !mysql_query("SET NAMES '".$this->settings->charset."'", $this->lnk)) {
 				throw new DatabaseException('Connect error: ' . mysql_error());
 			}
-			if($this->settings->timezone) {
+			if ($this->settings->timezone) {
 				@mysql_query("SET time_zone = '" . addslashes($this->settings->timezone) . "'", $this->lnk);
 			}
 		}
 	}
 	protected function disconnect() {
-		if(is_resource($this->lnk)) {
+		if (is_resource($this->lnk)) {
 			mysql_close($this->lnk);
 		}
 	}
@@ -43,7 +43,7 @@ class Mysql extends AbstractDriver
 	protected function real($sql) {
 		$this->connect();
 		$temp = mysql_query($sql, $this->lnk);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . mysql_error($this->lnk) . ' <'.$sql.'>');
 		}
 		$this->iid = mysql_insert_id($this->lnk);
@@ -74,20 +74,20 @@ class Mysql extends AbstractDriver
 	}
 
 	public function escape($input) {
-		if(is_array($input)) {
-			foreach($input as $k => $v) {
+		if (is_array($input)) {
+			foreach ($input as $k => $v) {
 				$input[$k] = $this->escape($v);
 			}
 			return implode(',', $input);
 		}
-		if(is_string($input)) {
+		if (is_string($input)) {
 			$input = mysql_real_escape_string($input, $this->lnk);
 			return "'".$input."'";
 		}
-		if(is_bool($input)) {
+		if (is_bool($input)) {
 			return $input === false ? 0 : 1;
 		}
-		if(is_null($input)) {
+		if (is_null($input)) {
 			return 'NULL';
 		}
 		return $input;

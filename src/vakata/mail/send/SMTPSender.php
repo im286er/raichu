@@ -6,17 +6,17 @@ class SMTPSender implements SenderInterface
 	protected $connection = null;
 
 	protected function host() {
-		if(isset($_SERVER) && isset($_SERVER['SERVER_NAME']) && !empty($_SERVER['SERVER_NAME'])) {
+		if (isset($_SERVER) && isset($_SERVER['SERVER_NAME']) && !empty($_SERVER['SERVER_NAME'])) {
 			return $_SERVER['SERVER_NAME'];
 		}
-		if(function_exists('gethostname')) {
+		if (function_exists('gethostname')) {
 			$temp = gethostname();
-			if($temp !== false) {
+			if ($temp !== false) {
 				return $temp;
 			}
 		}
 		$temp = php_uname('n');
-		if($temp !== false) {
+		if ($temp !== false) {
 			return $temp;
 		}
 		return 'local.dev';
@@ -28,7 +28,7 @@ class SMTPSender implements SenderInterface
 		while (is_resource($this->connection) && !feof($this->connection)) {
 			$tmp = @fgets($this->connection, 515);
 			$str .= $tmp;
-			if((isset($tmp[3]) && $tmp[3] == ' ')) {
+			if ((isset($tmp[3]) && $tmp[3] == ' ')) {
 				break;
 			}
 		}
@@ -44,7 +44,7 @@ class SMTPSender implements SenderInterface
 		$data = $this->read();
 		$code = substr($data, 0, 3);
 		$data = substr($data, 4);
-		if(count($expect) && !in_array($code, $expect)) {
+		if (count($expect) && !in_array($code, $expect)) {
 			throw new \vakata\mail\MailException('SMTP Error : ' . $code);
 		}
 		return $data;
@@ -52,7 +52,7 @@ class SMTPSender implements SenderInterface
 
 	public function __construct($connection) {
 		$connection = parse_url($connection); // host, port, user, pass 
-		if($connection === false) {
+		if ($connection === false) {
 			throw new \vakata\mail\MailException('Could not parse SMTP config');
 		}
 
@@ -66,7 +66,7 @@ class SMTPSender implements SenderInterface
 			300 // default is 5 minutes
 		);
 
-		if(!is_resource($this->connection)) {
+		if (!is_resource($this->connection)) {
 			throw new \vakata\mail\MailException('Could not connect to SMTP server');
 		}
 
@@ -81,37 +81,37 @@ class SMTPSender implements SenderInterface
 		// parse hello fields
 		$smtp = array();
 		$data = explode("\n", $data);
-		foreach($data as $n => $s) {
+		foreach ($data as $n => $s) {
 			$s = trim(substr($s, 4));
-			if(!$s) { continue; }
+			if (!$s) { continue; }
 			$s = explode(' ', $s);
-			if(!empty($s)) {
+			if (!empty($s)) {
 				if (!$n) {
 					$n = 'HELO';
 					$s = $s[0];
 				}
 				else {
 					$n = array_shift($s);
-					if($n == 'SIZE') {
+					if ($n == 'SIZE') {
 						$s = ($s) ? $s[0] : 0;
 					}
 				}
 				$smtp[$n] = ($s ? $s : true);
 			}
 		}
-		if(isset($connection['scheme']) && $connection['scheme'] === 'tls') {
+		if (isset($connection['scheme']) && $connection['scheme'] === 'tls') {
 			$this->comm('STARTTLS', [220]);
-			if(!stream_socket_enable_crypto($this->connection, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+			if (!stream_socket_enable_crypto($this->connection, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
 				throw new \vakata\mail\MailException('Could not secure connection');
 			}
 		}
-		if(isset($connection['user'])) {
+		if (isset($connection['user'])) {
 			$username = $connection['user'];
 			$password = isset($connection['pass']) ? $connection['pass'] : '';
 			$auth = 'LOGIN';
-			if(isset($smtp['AUTH']) && is_array($smtp['AUTH'])) {
-				foreach(['LOGIN', 'CRAM-MD5', 'PLAIN'] as $a) {
-					if(in_array($a, $smtp['AUTH'])) {
+			if (isset($smtp['AUTH']) && is_array($smtp['AUTH'])) {
+				foreach (['LOGIN', 'CRAM-MD5', 'PLAIN'] as $a) {
+					if (in_array($a, $smtp['AUTH'])) {
 						$auth = $a;
 						break;
 					}
@@ -137,7 +137,7 @@ class SMTPSender implements SenderInterface
 
 	public function __destruct() {
 		try {
-			if(is_resource($this->connection)) {
+			if (is_resource($this->connection)) {
 				$this->comm('QUIT', [221]);
 				@fclose($this->connection);
 			}
@@ -147,7 +147,7 @@ class SMTPSender implements SenderInterface
 
 	public static function pop($connection) {
 		$connection = parse_url($connection); // host, port, user, pass 
-		if($connection === false) {
+		if ($connection === false) {
 			throw new \vakata\mail\MailException('Could not parse POP config');
 		}
 
@@ -161,26 +161,26 @@ class SMTPSender implements SenderInterface
 			30
 		);
 
-		if(!is_resource($pop)) {
+		if (!is_resource($pop)) {
 			throw new \vakata\mail\MailException('Could not connect to POP server');
 		}
 
 		try {
 			stream_set_timeout($pop, 30);
-			if(substr(fgets($pop, 512), 0, 3) !== '+OK') {
+			if (substr(fgets($pop, 512), 0, 3) !== '+OK') {
 				throw new \vakata\mail\MailException('Error reading POP server');
 			}
-			if(isset($connection['user'])) {
+			if (isset($connection['user'])) {
 				fwrite($pop, 'USER ' . $connection['user'] . "\r\n");
-				if(substr(fgets($pop, 512), 0, 3) !== '+OK') {
+				if (substr(fgets($pop, 512), 0, 3) !== '+OK') {
 					throw new \vakata\mail\MailException('Error reading POP server');
 				}
 				fwrite($pop, 'PASS ' . (isset($connection['pass']) ? $connection['pass'] : '') . "\r\n");
-				if(substr(fgets($pop, 512), 0, 3) !== '+OK') {
+				if (substr(fgets($pop, 512), 0, 3) !== '+OK') {
 					throw new \vakata\mail\MailException('Error reading POP server');
 				}
 				try {
-					if(is_resource($pop)) {
+					if (is_resource($pop)) {
 						fwrite($pop, 'QUIT');
 						@fclose($pop);
 					}
@@ -190,7 +190,7 @@ class SMTPSender implements SenderInterface
 		}
 		catch(\Exception $e) {
 			try {
-				if(is_resource($pop)) {
+				if (is_resource($pop)) {
 					fwrite($pop, 'QUIT');
 					@fclose($pop);
 				}
@@ -205,7 +205,7 @@ class SMTPSender implements SenderInterface
 		$recp = array_merge($to, $cc, $bcc);
 		$badr = [];
 		$good = [];
-		foreach($recp as $v) {
+		foreach ($recp as $v) {
 			try {
 				$this->comm('RCPT TO:<' . $v . '>', [250, 251]);
 				$good[] = $v;
@@ -214,13 +214,13 @@ class SMTPSender implements SenderInterface
 				$badr[] = $v;
 			}
 		}
-		if(count($good)) {
+		if (count($good)) {
 			$this->comm('DATA', [354]);
 			$data = $headers . "\r\n\r\n" . $message;
 
 			$data = explode("\n", str_replace(array("\r\n", "\r"), "\n", $data));
-			foreach($data as $line) {
-				if(isset($line[0]) && $line[0] === '.') {
+			foreach ($data as $line) {
+				if (isset($line[0]) && $line[0] === '.') {
 					$line = '.' . $line;
 				}
 				$this->data($line . "\r\n");

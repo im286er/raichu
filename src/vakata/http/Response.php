@@ -16,7 +16,7 @@ class Response implements ResponseInterface
 	}
 
 	protected function cleanHeaderName($name) {
-		if(strncmp($name, 'HTTP_', 5) === 0) {
+		if (strncmp($name, 'HTTP_', 5) === 0) {
 			$name = substr($name, 5);
 		}
 		$name = str_replace('_', ' ', strtolower($name));
@@ -60,36 +60,67 @@ class Response implements ResponseInterface
 	}
 
 	public function setContentType($type) {
-		switch(mb_strtolower($type)) {
+		switch (mb_strtolower($type)) {
 			case "txt"  :
-			case "text" : $type = "text/plain; charset=UTF-8"; break;
-			case "xml"  : 
-			case "xsl"  : $type = "text/xml; charset=UTF-8"; break;
-			case "json" : $type = "application/json; charset=UTF-8"; break;
-			case "pdf"  : $type = "application/pdf"; break;
-			case "exe"  : $type = "application/octet-stream"; break;
-			case "zip"  : $type = "application/zip"; break;
+			case "text" :
+				$type = "text/plain; charset=UTF-8";
+				break;
+			case "xml"  :
+			case "xsl"  :
+				$type = "text/xml; charset=UTF-8";
+				break;
+			case "json" :
+				$type = "application/json; charset=UTF-8";
+				break;
+			case "pdf"  :
+				$type = "application/pdf";
+				break;
+			case "exe"  :
+				$type = "application/octet-stream";
+				break;
+			case "zip"  :
+				$type = "application/zip";
+				break;
 			case "docx" :
-			case "doc"  : $type = "application/msword"; break;
+			case "doc"  :
+				$type = "application/msword";
+				break;
 			case "xlsx" :
-			case "xls"  : $type = "application/vnd.ms-excel"; break;
-			case "ppt"  : $type = "application/vnd.ms-powerpoint"; break;
-			case "gif"  : $type = "image/gif"; break;
-			case "png"  : $type = "image/png"; break;
-			case "mp3"  : $type = "audio/mpeg"; break;
-			case "mp4"  : $type = "video/mpeg"; break;
+			case "xls"  :
+				$type = "application/vnd.ms-excel";
+				break;
+			case "ppt"  :
+				$type = "application/vnd.ms-powerpoint";
+				break;
+			case "gif"  :
+				$type = "image/gif";
+				break;
+			case "png"  :
+				$type = "image/png";
+				break;
+			case "mp3"  :
+				$type = "audio/mpeg";
+				break;
+			case "mp4"  :
+				$type = "video/mpeg";
+				break;
 			case "jpeg" :
-			case "jpg"  : $type = "image/jpg"; break;
+			case "jpg"  :
+				$type = "image/jpg";
+				break;
 			case "html" :
 			case "php"  :
-			case "htm"  : $type = "text/html; charset=UTF-8"; break;
-			default     : return;
+			case "htm"  :
+				$type = "text/html; charset=UTF-8";
+				break;
+			default     :
+				return;
 		}
 		$this->setHeader('Content-Type', $type);
 	}
 	public function setHeader($header, $value) {
 		$this->head[$this->cleanHeaderName($header)] = $value;
-		if($this->cleanHeaderName($header) === 'Location') {
+		if ($this->cleanHeaderName($header) === 'Location') {
 			$this->setStatusCode(302);
 		}
 	}
@@ -113,20 +144,20 @@ class Response implements ResponseInterface
 	}
 
 	public function enableCors(RequestInterface $req, array $methods = null) {
-		if(!$req->isCors()) {
+		if (!$req->isCors()) {
 			return;
 		}
-		if(!$methods) {
+		if (!$methods) {
 			$methods = [ 'GET', 'POST', 'PUT', 'PATCH', 'HEAD', 'DELETE' ];
 		}
 		$this->setHeader('Access-Control-Allow-Origin', $req->getHeader('Origin'));
 		$headers = [];
-		if($req->hasHeader('Access-Control-Request-Headers')) {
+		if ($req->hasHeader('Access-Control-Request-Headers')) {
 			$headers = array_map('trim', array_filter(explode(',', $req->getHeader('Access-Control-Request-Headers'))));
 		}
 		$headers[] = 'Authorization';
 		$this->setHeader('Access-Control-Allow-Headers', implode(', ', $headers));
-		if($req->getMethod() === 'OPTIONS') {
+		if ($req->getMethod() === 'OPTIONS') {
 			$this->setHeader('Access-Control-Max-Age', '3600');
 			$this->setHeader('Access-Control-Allow-Methods', implode(', ', $methods));
 		}
@@ -144,10 +175,10 @@ class Response implements ResponseInterface
 		$this->head = [];
 
 		$expires = 60*60*24*30; // 1 месец
-		if($file->modified) {
+		if ($file->modified) {
 			$this->setHeader('Last-Modified', gmdate("D, d M Y H:i:s", $file->modified) . ' GMT');
 		}
-		if($file->hash) {
+		if ($file->hash) {
 			$this->setHeader('Etag', $file->hash);
 		}
 		$this->setHeader('Pragma','public');
@@ -155,17 +186,17 @@ class Response implements ResponseInterface
 		$this->setHeader('Expires', gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT');
 
 		// ако клиента има кеширано копие пускаме 304 и не качваме брояча за downloaded
-		if(
+		if (
 			($file->modified && isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && @strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) == $file->modified) ||
 			($file->hash && isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim($_SERVER['HTTP_IF_NONE_MATCH']) == $file->hash)
 		) {
 			$this->setStatusCode(304);
 		}
-		// ако получаваме заявка за чънкове (resume/chunk поддръжка чрез HTTP_RANGE) 
+		// ако получаваме заявка за чънкове (resume/chunk поддръжка чрез HTTP_RANGE)
 		// но само ако имаме размера
-		if($chunks && $file->size && $location && isset($_SERVER['HTTP_RANGE'])) {
+		if ($chunks && $file->size && $location && isset($_SERVER['HTTP_RANGE'])) {
 			$this->setHeader('Accept-Ranges', 'bytes');
-			if(!preg_match('@^bytes=\d*-\d*(,\d*-\d*)*$@', $_SERVER['HTTP_RANGE'])) {
+			if (!preg_match('@^bytes=\d*-\d*(,\d*-\d*)*$@', $_SERVER['HTTP_RANGE'])) {
 				$this->setStatusCode(416);
 				$this->setHeader('Content-Range','bytes */' . $file->size);
 				$location = null;
@@ -193,25 +224,25 @@ class Response implements ResponseInterface
 			$this->setStatusCode(200);
 		}
 		$this->setContentType($extension);
-		if(!$this->hasHeader('Content-Type')) {
+		if (!$this->hasHeader('Content-Type')) {
 			$this->setHeader('Content-Type', 'application/octet-stream');
 		}
 		$this->setHeader('Content-Disposition', ( !$chunks && in_array(strtolower($extension), array('txt','png','jpg','gif','jpeg','html','htm','mp3','mp4')) ? 'inline' : 'attachment' ).'; filename="'.preg_replace('([^a-z0-9.-]+)i', '_', $file_name).'"; filename*=UTF-8\'\'' . rawurlencode($file_name) . '; size=' . $file->size);
-		if($file_end) {
-			$this->setHeader('Content-Length', $file_end); 
+		if ($file_end) {
+			$this->setHeader('Content-Length', $file_end);
 		}
 
 		session_write_close();
-		while(ob_get_level() && ob_end_clean()) ;
+		while (ob_get_level() && ob_end_clean()) ;
 		
-		if(!headers_sent()) {
+		if (!headers_sent()) {
 			http_response_code($this->code);
-			foreach($this->head as $key => $header) {
+			foreach ($this->head as $key => $header) {
 				header($key . ': ' . $header);
 			}
 		}
 
-		if($location && ($fp = @fopen($location, 'rb'))) {
+		if ($location && ($fp = @fopen($location, 'rb'))) {
 			set_time_limit(0);
 			ob_implicit_flush(true);
 			@ob_end_flush();
@@ -219,13 +250,13 @@ class Response implements ResponseInterface
 			fseek($fp, $file_beg);
 			$chunk = 1024 * 8;
 			$read = 0;
-			while(!feof($fp) && $read <= $file_end) {
+			while (!feof($fp) && $read <= $file_end) {
 				echo fread($fp, $chunk);
 				$read += $chunk;
-				if($file_end - $read < $chunk) {
+				if ($file_end - $read < $chunk) {
 					$chunk = $file_end - $read;
 				}
-				if(!$chunk) {
+				if (!$chunk) {
 					break;
 				}
 			}
@@ -240,30 +271,30 @@ class Response implements ResponseInterface
 	}
 
 	public function send() {
-		if(!$this->hasHeader('Content-Type')) {
+		if (!$this->hasHeader('Content-Type')) {
 			$this->setContentType('html');
 		}
-		if($this->body === null) {
+		if ($this->body === null) {
 			$this->body = ob_get_clean();
 		}
-		while(ob_get_level() && ob_end_clean()) ;
+		while (ob_get_level() && ob_end_clean()) ;
 
 		// above headers, so that filters can send headers
-		if($this->body !== null && strlen($this->body)) {
+		if ($this->body !== null && strlen($this->body)) {
 			$type = explode(';', $this->getHeader('Content-Type'))[0];
-			foreach($this->filters as $filter) {
+			foreach ($this->filters as $filter) {
 				$this->body = call_user_func($filter, $this->body, $type);
 			}
 		}
 
-		if(!headers_sent()) {
+		if (!headers_sent()) {
 			http_response_code($this->code);
-			foreach($this->head as $key => $header) {
+			foreach ($this->head as $key => $header) {
 				header($key . ': ' . $header);
 			}
 		}
-		if($this->body !== null && strlen($this->body)) {
-			if($this->gzip && !(bool)@ini_get('zlib.output_compression') && extension_loaded('zlib')) {
+		if ($this->body !== null && strlen($this->body)) {
+			if ($this->gzip && !(bool)@ini_get('zlib.output_compression') && extension_loaded('zlib')) {
 				ob_start('ob_gzhandler');
 			}
 			echo $this->body;

@@ -17,14 +17,14 @@ class Sphinx extends AbstractDriver
 
 	public function __construct($settings) {
 		parent::__construct($settings);
-		if(!$this->settings->serverport) {
+		if (!$this->settings->serverport) {
 			$this->settings->serverport = 9306;
 		}
 		$this->mnd = function_exists('mysqli_fetch_all');
 	}
 
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$this->lnk = new \mysqli(
 							($this->settings->persist ? 'p:' : '') . $this->settings->servername,
 							$this->settings->username,
@@ -32,16 +32,16 @@ class Sphinx extends AbstractDriver
 							$this->settings->database,
 							$this->settings->serverport
 			);
-			if($this->lnk->connect_errno) {
+			if ($this->lnk->connect_errno) {
 				throw new DatabaseException('Connect error: ' . $this->lnk->connect_errno);
 			}
-			if(!$this->lnk->set_charset($this->settings->charset)) {
+			if (!$this->lnk->set_charset($this->settings->charset)) {
 				throw new DatabaseException('Charset error: ' . $this->lnk->connect_errno);
 			}
 		}
 	}
 	protected function disconnect() {
-		if($this->lnk !== null) {
+		if ($this->lnk !== null) {
 			@$this->lnk->close();
 		}
 	}
@@ -49,7 +49,7 @@ class Sphinx extends AbstractDriver
 	protected function real($sql) {
 		$this->connect();
 		$temp = $this->lnk->query($sql);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . $this->lnk->error . ' <'.$sql.'>');
 		}
 		$this->iid = $this->lnk->insert_id;
@@ -58,57 +58,57 @@ class Sphinx extends AbstractDriver
 	}
 	public function escape($input) {
 		$this->connect();
-		if(is_array($input)) {
-			foreach($input as $k => $v) {
+		if (is_array($input)) {
+			foreach ($input as $k => $v) {
 				$input[$k] = $this->escape($v);
 			}
 			return implode(',', $input);
 		}
-		if(is_string($input)) {
+		if (is_string($input)) {
 			$input = $this->lnk->real_escape_string($input);
 			return "'".$input."'";
 		}
-		if(is_bool($input)) {
+		if (is_bool($input)) {
 			return $input === false ? 0 : 1;
 		}
-		if(is_null($input)) {
+		if (is_null($input)) {
 			return 'NULL';
 		}
 		return $input;
 	}
 
 	public function nextr($result) {
-		if($this->mnd) {
+		if ($this->mnd) {
 			return $result->fetch_array(MYSQL_BOTH);
 		}
 		$ref = $result->result_metadata();
-		if(!$ref) {
+		if (!$ref) {
 			return false;
 		}
 		$tmp = mysqli_fetch_fields($ref);
-		if(!$tmp) {
+		if (!$tmp) {
 			return false;
 		}
 		$ref = [];
-		foreach($tmp as $col) {
+		foreach ($tmp as $col) {
 			$ref[] = [$col->name, null];
 		}
 		$tmp = [];
-		foreach($ref as $k => $v) {
+		foreach ($ref as $k => $v) {
 			$tmp[] =& $ref[$k][1];
 		}
 		try {
-			if(!call_user_func_array(array($result, 'bind_result'), $tmp)) {
+			if (!call_user_func_array(array($result, 'bind_result'), $tmp)) {
 				return false;
 			}
 		}
 		catch(\Exception $e) {}
-		if(!$result->fetch()) {
+		if (!$result->fetch()) {
 			return false;
 		}
 		$tmp = [];
 		$i = 0;
-		foreach($ref as $k => $v) {
+		foreach ($ref as $k => $v) {
 			$tmp[$i++] = $v[1];
 			$tmp[$v[0]] = $v[1];
 		}

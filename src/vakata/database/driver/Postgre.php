@@ -9,12 +9,12 @@ class Postgre extends AbstractDriver
 	protected $transaction = false;
 	public function __construct($settings) {
 		parent::__construct($settings);
-		if(!$this->settings->serverport) {
+		if (!$this->settings->serverport) {
 			$this->settings->serverport = 5432;
 		}
 	}
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$this->lnk = ($this->settings->persist) ?
 					@pg_pconnect(
 									"host=" . $this->settings->servername . " " .
@@ -32,16 +32,16 @@ class Postgre extends AbstractDriver
 									"dbname=" . $this->settings->database . " " .
 									"options='--client_encoding=".strtoupper($this->settings->charset)."' "
 					);
-			if($this->lnk === false) {
+			if ($this->lnk === false) {
 				throw new DatabaseException('Connect error');
 			}
-			if($this->settings->timezone) {
+			if ($this->settings->timezone) {
 				@pg_query($this->lnk, "SET TIME ZONE '".addslashes($this->settings->timezone)."'");
 			}
 		}
 	}
 	protected function disconnect() {
-		if(is_resource($this->lnk)) {
+		if (is_resource($this->lnk)) {
 			pg_close($this->lnk);
 		}
 	}
@@ -51,12 +51,12 @@ class Postgre extends AbstractDriver
 	public function prepare($sql) {
 		$this->connect();
 		$binder = '?';
-		if(strpos($sql, $binder) !== false) {
+		if (strpos($sql, $binder) !== false) {
 			$tmp = explode($binder, $sql);
 			$sql = '';
-			foreach($tmp as $i => $v) {
+			foreach ($tmp as $i => $v) {
 				$sql .= $v;
-				if(isset($tmp[($i + 1)])) {
+				if (isset($tmp[($i + 1)])) {
 					$sql .= '$' . ($i + 1);
 				}
 			}
@@ -65,16 +65,16 @@ class Postgre extends AbstractDriver
 	}
 	public function execute($sql, array $data = null) {
 		$this->connect();
-		if(!is_array($data)) {
+		if (!is_array($data)) {
 			$data = array();
 		}
 		$temp = (is_array($data) && count($data)) ? pg_query_params($this->lnk, $sql, $data) : pg_query_params($this->lnk, $sql, array());
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . pg_last_error($this->lnk) . ' <'.$sql.'>');
 		}
-		if(preg_match('@^\s*(INSERT|REPLACE)\s+INTO@i', $sql)) {
+		if (preg_match('@^\s*(INSERT|REPLACE)\s+INTO@i', $sql)) {
 			$this->iid = pg_query($this->lnk, 'SELECT lastval()');
-			if($this->iid) {
+			if ($this->iid) {
 				$this->iid = pg_fetch_row($this->iid);
 				$this->iid = $this->iid[0];
 			}

@@ -26,22 +26,22 @@ class TreeNode
 		$this->id = $id;
 		$this->fields = array_merge($this->fields, $fields);
 		$this->data = $data ? $data : $this->db->one("SELECT * FROM {$this->tb} WHERE {$this->fields['id']} = ?", [ $this->id ]);
-		if(!$this->data) {
+		if (!$this->data) {
 			throw new TreeException('Node does not exist', 404);
 		}
 	}
 	public function __get($key) {
-		if(isset($this->fields[$key])) {
+		if (isset($this->fields[$key])) {
 			$key = $this->fields[$key];
 		}
-		if(isset($this->data[$key])) {
+		if (isset($this->data[$key])) {
 			return $this->data[$key];
 		}
 		return null;
 	}
 
 	public function parent() {
-		if(isset($this->p)) {
+		if (isset($this->p)) {
 			return $this->p;
 		}
 		return $this->p = new self($this->db, $this->tb, $this->data[$this->fields['parent_id']], $this->fields);
@@ -53,21 +53,21 @@ class TreeNode
 		return count($this->children());
 	}
 	public function children() {
-		if(isset($this->c)) {
+		if (isset($this->c)) {
 			return $this->c;
 		}
 		$temp = [];
-		foreach($this->db->all("SELECT * FROM {$this->tb} WHERE {$this->fields['parent_id']} = ? ORDER BY {$this->fields['position']}", [ $this->id ]) as $data) {
+		foreach ($this->db->all("SELECT * FROM {$this->tb} WHERE {$this->fields['parent_id']} = ? ORDER BY {$this->fields['position']}", [ $this->id ]) as $data) {
 			$temp[] = new self($this->db, $this->tb, $data[$this->fields['id']], $this->fields, $data);
 		}
 		return $this->c = $temp;
 	}
 	public function descendants() {
-		if(isset($this->d)) {
+		if (isset($this->d)) {
 			return $this->d;
 		}
 		$temp = [];
-		foreach($this->db->all(
+		foreach ($this->db->all(
 			"SELECT * FROM {$this->tb} WHERE {$this->fields['left']} > ? AND {$this->fields['right']} < ? ORDER BY {$this->fields['left']}",
 			[ $this->left, $this->right ]
 		) as $data) {
@@ -76,11 +76,11 @@ class TreeNode
 		return $this->d = $temp;
 	}
 	public function ancestors($id) {
-		if(isset($this->a)) {
+		if (isset($this->a)) {
 			return $this->a;
 		}
 		$temp = [];
-		foreach($this->db->all(
+		foreach ($this->db->all(
 			"SELECT * FROM {$this->tb} WHERE {$this->fields['left']} < ? AND {$this->fields['right']} > ? ORDER BY {$this->fields['left']}",
 			[ $this->left, $this->right ]
 		) as $data) {

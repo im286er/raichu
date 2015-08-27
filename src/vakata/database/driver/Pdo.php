@@ -12,7 +12,7 @@ class Pdo extends AbstractDriver
 	}
 
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			try {
 				$this->lnk = new \PDO($this->settings->original, $this->settings->username, $this->settings->password, $this->settings->options);
 			} catch(\Exception $e) {
@@ -21,7 +21,7 @@ class Pdo extends AbstractDriver
 		}
 	}
 	protected function disconnect() {
-		if($this->lnk !== null) {
+		if ($this->lnk !== null) {
 			unset($this->lnk);
 			$this->lnk = null;
 		}
@@ -29,7 +29,7 @@ class Pdo extends AbstractDriver
 	protected function real($sql) {
 		$this->connect();
 		$temp = $this->lnk->query($sql);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . $this->lnk->errorInfo() . ' <'.$sql.'>');
 		}
 		$this->aff = $temp->rowCount();
@@ -49,41 +49,41 @@ class Pdo extends AbstractDriver
 	public function prepare($sql) {
 		$this->connect();
 		$temp = $this->lnk->prepare($sql);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not prepare : ' . $this->lnk->error . ' <'.$sql.'>');
 		}
 		return $temp;
 	}
 	public function execute($sql, array $data = null) {
 		$this->connect();
-		if(!is_array($data)) {
+		if (!is_array($data)) {
 			$data = array();
 		}
-		if(is_string($sql)) {
+		if (is_string($sql)) {
 			$sql = $this->prepare($sql);
 		}
 		$rtrn = $sql->execute(array_values($data));
-		if(!$rtrn) {
+		if (!$rtrn) {
 			throw new DatabaseException('Prepared execute error : ' . $sql->errorInfo());
 		}
 		$this->aff = $sql->rowCount();
 		return $sql->columnCount() ? $sql : $rtrn;
 	}
 	public function escape($input) {
-		if(is_array($input)) {
-			foreach($input as $k => $v) {
+		if (is_array($input)) {
+			foreach ($input as $k => $v) {
 				$input[$k] = $this->escape($v);
 			}
 			return implode(',', $input);
 		}
-		if(is_string($input)) {
+		if (is_string($input)) {
 			$input = $this->lnk->quote($input);
 			return "'".$input."'";
 		}
-		if(is_bool($input)) {
+		if (is_bool($input)) {
 			return $input === false ? 0 : 1;
 		}
-		if(is_null($input)) {
+		if (is_null($input)) {
 			return 'NULL';
 		}
 		return $input;

@@ -9,7 +9,7 @@ class Ibase extends AbstractDriver
 
 	public function __construct($settings) {
 		parent::__construct($settings);
-		if(!is_file($this->settings->database) && is_file('/'.$this->settings->database)) {
+		if (!is_file($this->settings->database) && is_file('/'.$this->settings->database)) {
 			$this->settings->database = '/'.$this->settings->database;
 		}
 		$this->settings->servername = ($this->settings->servername === 'localhost' || $this->settings->servername === '') ?
@@ -17,7 +17,7 @@ class Ibase extends AbstractDriver
 			$this->settings->servername . ':';
 	}
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$this->lnk = ($this->settings->persist) ?
 					@\ibase_pconnect(
 									$this->settings->servername . $this->settings->database,
@@ -31,13 +31,13 @@ class Ibase extends AbstractDriver
 									$this->settings->password,
 									strtoupper($this->settings->charset)
 					);
-			if($this->lnk === false) {
+			if ($this->lnk === false) {
 				throw new DatabaseException('Connect error: ' . \ibase_errmsg());
 			}
 		}
 	}
 	protected function disconnect() {
-		if(is_resource($this->lnk)) {
+		if (is_resource($this->lnk)) {
 			\ibase_close($this->lnk);
 		}
 	}
@@ -45,7 +45,7 @@ class Ibase extends AbstractDriver
 	protected function real($sql) {
 		$this->connect();
 		$temp = \ibase_query($this->transaction !== null ? $this->transaction : $this->lnk, $sql);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . \ibase_errmsg() . ' <'.$sql.'>');
 		}
 		$this->aff = \ibase_affected_rows($this->lnk);
@@ -57,12 +57,12 @@ class Ibase extends AbstractDriver
 	}
 	public function execute($sql, array $data = null) {
 		$this->connect();
-		if(!is_array($data)) {
+		if (!is_array($data)) {
 			$data = array();
 		}
 		$data = array_values($data);
-		foreach($data as $i => $v) {
-			switch(gettype($v)) {
+		foreach ($data as $i => $v) {
+			switch (gettype($v)) {
 				case "boolean":
 				case "integer":
 					$data[$i] = (int)$v;
@@ -78,7 +78,7 @@ class Ibase extends AbstractDriver
 		}
 		array_unshift($data, $sql);
 		$temp = call_user_func_array("\ibase_execute", $data);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . \ibase_errmsg() . ' <'.$sql.'>');
 		}
 		$this->aff = \ibase_affected_rows($this->lnk);
@@ -94,17 +94,17 @@ class Ibase extends AbstractDriver
 	public function begin() {
 		$this->connect();
 		$this->transaction = \ibase_trans($this->lnk);
-		if($this->transaction === false) {
+		if ($this->transaction === false) {
 			$this->transaction === null;
 		}
 		return ($this->transaction !== null);
 	}
 	public function commit() {
 		$this->connect();
-		if($this->transaction === null) {
+		if ($this->transaction === null) {
 			return false;
 		}
-		if(!\ibase_commit($this->transaction)) {
+		if (!\ibase_commit($this->transaction)) {
 			return false;
 		}
 		$this->transaction = null;
@@ -112,10 +112,10 @@ class Ibase extends AbstractDriver
 	}
 	public function rollback() {
 		$this->connect();
-		if($this->transaction === null) {
+		if ($this->transaction === null) {
 			return false;
 		}
-		if(!\ibase_rollback($this->transaction)) {
+		if (!\ibase_rollback($this->transaction)) {
 			return false;
 		}
 		$this->transaction = null;

@@ -12,19 +12,19 @@ class Server extends Base
 		$this->sockets = [];
 		$this->sockets[] = $this->server;
 
-		while(true) {
+		while (true) {
 			$changed = $this->sockets;
-			if(@stream_select($changed, $write = null, $except = null, null) > 0) {
+			if (@stream_select($changed, $write = null, $except = null, null) > 0) {
 				$messages = [];
-				foreach($changed as $socket) {
-					if($socket === $this->server) {
+				foreach ($changed as $socket) {
+					if ($socket === $this->server) {
 						$temp = stream_socket_accept($this->server);
 						$this->connect($temp);
 					}
 					else {
 						$message = $this->receive($socket);
 						//echo $message."\r\n";
-						if($message === false) {
+						if ($message === false) {
 							$this->disconnect($socket);
 						}
 						else {
@@ -35,9 +35,9 @@ class Server extends Base
 						}
 					}
 				}
-				foreach($messages as $message) {
-					foreach($this->sockets as $k => $recv) {
-						if($recv !== $this->server && $k !== $message['sender']) {
+				foreach ($messages as $message) {
+					foreach ($this->sockets as $k => $recv) {
+						if ($recv !== $this->server && $k !== $message['sender']) {
 							$this->send($recv, $message['message']);
 						}
 					}
@@ -53,17 +53,17 @@ class Server extends Base
 		$message = explode("\r\n", $message);
 		$new = [];
 		$new['resource'] = explode(' ', $message[0]);
-		if(count($new['resource']) < 1) {
+		if (count($new['resource']) < 1) {
 			return false;
 		}
 		$new['resource'] = $new['resource'][1];
-		foreach($message as $k) {
+		foreach ($message as $k) {
 			$k = explode(':', $k, 2);
-			if(count($k) === 2) {
+			if (count($k) === 2) {
 				$new[trim(strtolower($k[0]))] = trim($k[1]);
 			}
 		}
-		if(!isset($new['sec-websocket-key']) || !isset($new['host'])) {
+		if (!isset($new['sec-websocket-key']) || !isset($new['host'])) {
 			return false;
 		}
 		$headers = [];
@@ -73,7 +73,7 @@ class Server extends Base
 		$headers[] = "Sec-WebSocket-Version: 13";
 		$headers[] = "Sec-WebSocket-Location: ws://".$new['host'].$new['resource'];
 		$headers[] = "Sec-WebSocket-Accept: ".base64_encode(sha1($new['sec-websocket-key'].'258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
-		if(isset($new['origin'])) {
+		if (isset($new['origin'])) {
 			$headers[] = "Sec-WebSocket-Origin: ".$new['origin'];
 		}
 		return $this->send($socket, implode("\r\n", $headers)."\r\n\r\n", false) > 0;
@@ -99,19 +99,19 @@ class Server extends Base
 		$this->sockets = [];
 		$this->sockets[] = $this->server;
 
-		while(true) {
+		while (true) {
 			$changed = $this->sockets;
-			if(@socket_select($changed, $write = null, $except = null, null) > 0) {
+			if (@socket_select($changed, $write = null, $except = null, null) > 0) {
 				$messages = [];
-				foreach($changed as $socket) {
-					if($socket === $this->server) {
+				foreach ($changed as $socket) {
+					if ($socket === $this->server) {
 						$temp = socket_accept($this->server);
 						$this->connect($temp);
 					}
 					else {
 						$message = $this->receive($socket);
 						//echo $message;
-						if($message === false) {
+						if ($message === false) {
 							$this->disconnect($socket);
 						}
 						else {
@@ -122,9 +122,9 @@ class Server extends Base
 						}
 					}
 				}
-				foreach($messages as $message) {
-					foreach($this->sockets as $k => $recv) {
-						if($recv !== $this->server && $k !== $message['sender']) {
+				foreach ($messages as $message) {
+					foreach ($this->sockets as $k => $recv) {
+						if ($recv !== $this->server && $k !== $message['sender']) {
 							$this->send($recv, $message['message']);
 						}
 					}
@@ -140,17 +140,17 @@ class Server extends Base
 		$message = explode("\r\n", $message);
 		$new = [];
 		$new['resource'] = explode(' ', $message[0]);
-		if(count($new['resource']) < 1) {
+		if (count($new['resource']) < 1) {
 			return false;
 		}
 		$new['resource'] = $new['resource'][1];
-		foreach($message as $k) {
+		foreach ($message as $k) {
 			$k = explode(':', $k, 2);
-			if(count($k) === 2) {
+			if (count($k) === 2) {
 				$new[trim(strtolower($k[0]))] = trim($k[1]);
 			}
 		}
-		if(!isset($new['sec-websocket-key']) || !isset($new['host'])) {
+		if (!isset($new['sec-websocket-key']) || !isset($new['host'])) {
 			return false;
 		}
 		$headers = [];
@@ -160,7 +160,7 @@ class Server extends Base
 		$headers[] = "Sec-WebSocket-Version: 13";
 		$headers[] = "Sec-WebSocket-Location: ws://".$new['host'].$new['resource'];
 		$headers[] = "Sec-WebSocket-Accept: ".base64_encode(sha1($new['sec-websocket-key'].'258EAFA5-E914-47DA-95CA-C5AB0DC85B11', true));
-		if(isset($new['origin'])) {
+		if (isset($new['origin'])) {
 			$headers[] = "Sec-WebSocket-Origin: ".$new['origin'];
 		}
 		return socket_write($socket, implode("\r\n", $headers)."\r\n\r\n") > 0;

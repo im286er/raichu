@@ -21,28 +21,28 @@ class DecoratorSession implements AuthenticationInterface
 			'regenerate'		=> 1800
 		], $settings);
 
-		if(!isset($_SESSION[$this->settings['key']])) {
+		if (!isset($_SESSION[$this->settings['key']])) {
 			$_SESSION[$this->settings['key']] = [];
 		}
-		if(!isset($_SESSION[$this->settings['key']]['ip'])) {
+		if (!isset($_SESSION[$this->settings['key']]['ip'])) {
 			$_SESSION[$this->settings['key']]['ip'] = $this->ipAddress();
 		}
-		if(!isset($_SESSION[$this->settings['key']]['ua'])) {
+		if (!isset($_SESSION[$this->settings['key']]['ua'])) {
 			$_SESSION[$this->settings['key']]['ua'] = $this->userAgent();
 		}
-		if(!isset($_SESSION[$this->settings['key']]['lastlogin'])) {
+		if (!isset($_SESSION[$this->settings['key']]['lastlogin'])) {
 			$_SESSION[$this->settings['key']]['lastlogin'] = 0;
 		}
-		if(!isset($_SESSION[$this->settings['key']]['lastregenerate'])) {
+		if (!isset($_SESSION[$this->settings['key']]['lastregenerate'])) {
 			$_SESSION[$this->settings['key']]['lastregenerate'] = 0;
 		}
-		if(!isset($_SESSION[$this->settings['key']]['sessionstart'])) {
+		if (!isset($_SESSION[$this->settings['key']]['sessionstart'])) {
 			$_SESSION[$this->settings['key']]['sessionstart'] = time();
 		}
-		if(!isset($_SESSION[$this->settings['key']]['lastseen'])) {
+		if (!isset($_SESSION[$this->settings['key']]['lastseen'])) {
 			$_SESSION[$this->settings['key']]['lastseen'] = time();
 		}
-		if(!isset($_SESSION[$this->settings['key']]['data'])) {
+		if (!isset($_SESSION[$this->settings['key']]['data'])) {
 			$_SESSION[$this->settings['key']]['data'] = null;
 		}
 	}
@@ -51,7 +51,7 @@ class DecoratorSession implements AuthenticationInterface
 	}
 	public function authenticate($data = null) {
 		$temp = $this->auth->authenticate($data);
-		if($temp) {
+		if ($temp) {
 			session_regenerate_id(true);
 			$_SESSION[$this->settings['key']]['ip']             = $this->ipAddress();
 			$_SESSION[$this->settings['key']]['ua']             = $this->userAgent();
@@ -65,23 +65,23 @@ class DecoratorSession implements AuthenticationInterface
 			$temp['seen']    = $_SESSION[$this->settings['key']]['lastseen'];
 			return $_SESSION[$this->settings['key']]['data'] = $temp;
 		}
-		if(isset($_SESSION[$this->settings['key']]['data'])) {
-			if($this->settings['match_ip'] && $this->ipAddress() !== $_SESSION[$this->settings['key']]['ip']) {
+		if (isset($_SESSION[$this->settings['key']]['data'])) {
+			if ($this->settings['match_ip'] && $this->ipAddress() !== $_SESSION[$this->settings['key']]['ip']) {
 				throw new UserException('Достъпвате системата от различно IP.');
 			}
-			if($this->settings['match_user_agent'] && $this->userAgent() !== $_SESSION[$this->settings['key']]['ua']) {
+			if ($this->settings['match_user_agent'] && $this->userAgent() !== $_SESSION[$this->settings['key']]['ua']) {
 				throw new UserException('Достъпвате системата от различен браузър.');
 			}
-			if($this->settings['session_timeout'] && time() - (int)$_SESSION[$this->settings['key']]['lastseen'] >= $this->settings['session_timeout']) {
+			if ($this->settings['session_timeout'] && time() - (int)$_SESSION[$this->settings['key']]['lastseen'] >= $this->settings['session_timeout']) {
 				throw new UserException('Изтекла сесия.');
 			}
-			if($this->settings['login_timeout'] && time() - (int)$_SESSION[$this->settings['key']]['lastlogin'] >= $this->settings['login_timeout']) {
+			if ($this->settings['login_timeout'] && time() - (int)$_SESSION[$this->settings['key']]['lastlogin'] >= $this->settings['login_timeout']) {
 				throw new UserException('Моля влезте отново.');
 			}
 			// валиден
 			$_SESSION[$this->settings['key']]['data']['regenerated'] = 0;
 			$_SESSION[$this->settings['key']]['data']['seen'] = $_SESSION[$this->settings['key']]['lastseen'] = time();
-			if($this->settings['regenerate'] && time() - (int)$_SESSION[$this->settings['key']]['lastregenerate'] > $this->settings['regenerate']) {
+			if ($this->settings['regenerate'] && time() - (int)$_SESSION[$this->settings['key']]['lastregenerate'] > $this->settings['regenerate']) {
 				$_SESSION[$this->settings['key']]['data']['regenerated'] = $_SESSION[$this->settings['key']]['lastregenerate'] = $_SESSION[$this->settings['key']]['data']['seen'];
 				session_regenerate_id(true);
 			}
@@ -101,7 +101,7 @@ class DecoratorSession implements AuthenticationInterface
 
 	/*
 	public function ipRange($ip, $range) {
-		if(strpos($range, '/') !== false) {
+		if (strpos($range, '/') !== false) {
 			// $range is in IP/NETMASK format
 			list($range, $netmask) = explode('/', $range, 2);
 			if (strpos($netmask, '.') !== false) {
@@ -113,7 +113,7 @@ class DecoratorSession implements AuthenticationInterface
 			// $netmask is a CIDR size block
 			// fix the range argument
 			$x = explode('.', $range);
-			while(count($x)<4) $x[] = '0';
+			while (count($x)<4) $x[] = '0';
 			list($a,$b,$c,$d) = $x;
 			$range = sprintf("%u.%u.%u.%u", empty($a)?'0':$a, empty($b)?'0':$b,empty($c)?'0':$c,empty($d)?'0':$d);
 			$range_dec = ip2long($range);

@@ -9,8 +9,12 @@ class Memcache implements CacheInterface
 	protected $namespace	= 'default';
 
 	public function __construct($pool = '127.0.0.1', $default_namespace = 'default') {
-		if(is_string($pool)) { $pool = array('host' => $pool); }
-		if(isset($pool['host'])) { $pool = array($pool); }
+		if (is_string($pool)) {
+			$pool = array('host' => $pool);
+		}
+		if (isset($pool['host'])) {
+			$pool = array($pool);
+		}
 		$this->namespace = $default_namespace;
 		$this->pool = $pool;
 		$this->connect();
@@ -19,7 +23,7 @@ class Memcache implements CacheInterface
 	protected function connect() {
 		$this->connected	= false;
 		$this->memcache		= new \Memcache();
-		foreach($this->pool as $host) {
+		foreach ($this->pool as $host) {
 			$host = array_merge($host, array('port'=>11211, 'weight' => 1));
 			$this->memcache->addServer($host['host'], $host['port'], true, $host['weight']);
 			$stats = @$this->memcache->getExtendedStats();
@@ -31,13 +35,17 @@ class Memcache implements CacheInterface
 	}
 
 	protected function addNamespace($key, $partition = null) {
-		if(!$this->connected) { throw new CacheException('Cache not connected'); }
-		if(!$partition) { $partition = $this->namespace; }
+		if (!$this->connected) {
+			throw new CacheException('Cache not connected');
+		}
+		if (!$partition) {
+			$partition = $this->namespace;
+		}
 
 		$tmp = $this->memcache->get($partition);
-		if((int)$tmp === 0) {
+		if ((int)$tmp === 0) {
 			$tmp = rand(1, 10000);
-			if(!$this->memcache->set($partition, $tmp, 0, 0)) {
+			if (!$this->memcache->set($partition, $tmp, 0, 0)) {
 				throw new CacheException('Could not add cache namespace');
 			}
 		}
@@ -45,22 +53,36 @@ class Memcache implements CacheInterface
 	}
 
 	public function clear($partition = null) {
-		if(!$this->connected) { throw new CacheException('Cache not connected'); }
-		if(!$partition) { $partition = $this->namespace; }
+		if (!$this->connected) {
+			throw new CacheException('Cache not connected');
+		}
+		if (!$partition) {
+			$partition = $this->namespace;
+		}
 		$this->memcache->increment($partition);
 	}
 
 	public function prepare($key, $partition = null) {
-		if(!$partition) { $partition = $this->namespace; }
+		if (!$partition) {
+			$partition = $this->namespace;
+		}
 		$key = $this->addNamespace($key, $partition);
 		$this->memcache->set($key . '_meta', 'wait', MEMCACHE_COMPRESSED, time() + 10);
 	}
 
 	public function set($key, $value, $partition = null, $expires = 14400) {
-		if(!$this->connected) { throw new CacheException('Cache not connected'); }
-		if(!$partition) { $partition = $this->namespace; }
-		if(is_string($expires)) { $expires = (int)strtotime($expires) - time(); }
-		if((int)$expires <= 0)  { $expires = 14400; }
+		if (!$this->connected) {
+			throw new CacheException('Cache not connected');
+		}
+		if (!$partition) {
+			$partition = $this->namespace;
+		}
+		if (is_string($expires)) {
+			$expires = (int)strtotime($expires) - time();
+		}
+		if ((int)$expires <= 0) {
+			$expires = 14400;
+		}
 
 		$orig_value = $value;
 
@@ -70,33 +92,33 @@ class Memcache implements CacheInterface
 
 		$res = true;
 		$res = $res && $this->memcache->set($key . '_meta', base64_encode(serialize(array("created" => time(), "expires" => time() + $expires, 'chunks' => count($value)))), MEMCACHE_COMPRESSED, $expires);
-		foreach($value as $k => $v) {
+		foreach ($value as $k => $v) {
 			$res = $res && $this->memcache->set($key . '_' . $k, $v, MEMCACHE_COMPRESSED, $expires);
 		}
-		if(!$res) {
+		if (!$res) {
 			throw new CacheException('Could not save cache key');
 		}
 		return $orig_value;
 	}
 
 	public function get($key, $partition = null, $meta_only = false) {
-		if(!$this->connected) {
+		if (!$this->connected) {
 			throw new CacheException('Cache not connected');
 		}
-		if(!$partition) {
+		if (!$partition) {
 			$partition = $this->namespace;
 		}
 
 		$key = $this->addNamespace($key, $partition);
 
 		$cntr = 0;
-		while(true) {
+		while (true) {
 			$meta = $this->memcache->get($key . '_meta');
-			if($meta === false) {
+			if ($meta === false) {
 				throw new CacheException('Could not get cache meta');
 			}
-			if($meta === 'wait') {
-				if(++$cntr > 10) {
+			if ($meta === 'wait') {
+				if (++$cntr > 10) {
 					$this->memcache->delete($key . '_meta');
 					throw new CacheException('Could not get cache meta');
 				}
@@ -107,13 +129,13 @@ class Memcache implements CacheInterface
 		}
 
 		$meta = unserialize(base64_decode($meta));
-		if($meta_only) {
+		if ($meta_only) {
 			return $meta;
 		}
 		$value = '';
-		for($i = 0; $i < $meta['chunks']; $i++) {
+		for ($i = 0; $i < $meta['chunks']; $i++) {
 			$tmp = $this->memcache->get($key . '_' . $i);
-			if($tmp == false) { throw new CacheException('Missing cache chunk'); }
+			if ($tmp == false) { throw new CacheException('Missing cache chunk'); }
 			$value .= $tmp;
 		}
 		$value = unserialize(base64_decode($value));
@@ -121,14 +143,14 @@ class Memcache implements CacheInterface
 	}
 
 	public function delete($key, $partition = null) {
-		if(!$this->connected) {
+		if (!$this->connected) {
 			throw new CacheException('Cache not connected');
 		}
-		if(!$partition) {
+		if (!$partition) {
 			$partition = $this->namespace;
 		}
 		$key = $this->addNamespace($key, $partition);
-		if(!$this->memcache->delete($key . '_meta')) {
+		if (!$this->memcache->delete($key . '_meta')) {
 			throw new CacheException('Could not delete cache key');
 		}
 	}

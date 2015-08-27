@@ -12,35 +12,35 @@ class Route
 
 	protected function compile($url, $full = true) {
 		$url = array_filter(explode('/',trim($url, '/')), function ($v) { return $v !== ''; });
-		if(!count($url)) {
+		if (!count($url)) {
 			return $full ? '(^/+$)ui' : '(^/+)ui';
 		}
 		$url = '(^/' . implode('', array_map([$this, 'compileSegment'], $url)) . ($full ? '$' : '') .')';
-		if(@preg_match($url, '') === false) {
+		if (@preg_match($url, '') === false) {
 			throw new RouteException('Could not compile route regex');
 		}
 		return $url;
 	}
 	protected function compileSegment($url) {
 		$all = preg_match('(^\{[^\}]+\}$)', $url);
-		if(!preg_match('(([^{]*)\{([^}]+)\}([^{]*))i', $url)) {
+		if (!preg_match('(([^{]*)\{([^}]+)\}([^{]*))i', $url)) {
 			return '(' . preg_quote($url) . ')/';
 		}
 		$url = preg_replace_callback(
-			'(([^{]*)\{([^}]+)\}([^{]*))i', 
+			'(([^{]*)\{([^}]+)\}([^{]*))i',
 			function ($matches) use ($all) {
 				$optional = $matches[2][0] === '?';
-				if($optional) {
+				if ($optional) {
 					$matches[2] = substr($matches[2], 1);
 				}
 				$matches[2] = explode(':', $matches[2], 2);
-				if(count($matches[2]) === 1) {
+				if (count($matches[2]) === 1) {
 					$matches[2] = in_array($matches[2][0], ['a','i','h','*','**']) || !preg_match('(^[a-z]+$)', $matches[2][0]) ? 
 						[$matches[2][0], ''] : 
 						['*', $matches[2][0]];
 				}
 				list($regex, $group) = $matches[2];
-				switch($regex) {
+				switch ($regex) {
 					case 'i':
 						$regex = '[0-9]+';
 						break;
@@ -62,7 +62,7 @@ class Route
 						break;
 				}
 				$regex = '(' . ( strlen($group) ? '?P<'.preg_quote($group).'>' : '' ) . $regex . ')';
-				if(!$all) {
+				if (!$all) {
 					$regex = $optional ? $regex . '?' : $regex;
 				}
 				else {
@@ -81,9 +81,9 @@ class Route
 	public function with($prefix = '', callable $handler = null) {
 		$prefix = trim($prefix, '/');
 		$this->prefix = $prefix . (strlen($prefix) ? '/' : '');
-		if(isset($handler)) {
+		if (isset($handler)) {
 			$prefix = $this->compile($prefix, false);
-			if(!isset($this->preprocessors[$prefix])) {
+			if (!isset($this->preprocessors[$prefix])) {
 				$this->preprocessors[$prefix] = [];
 			}
 			$this->preprocessors[$prefix][] = $handler;
@@ -96,34 +96,34 @@ class Route
 		$url     = array_pop($args);
 		$method  = array_pop($args);
 
-		if(!$method && (is_array($url) || in_array($url, ['GET','HEAD','POST','PATCH','DELETE','PUT','OPTIONS','REPORT']))) {
+		if (!$method && (is_array($url) || in_array($url, ['GET','HEAD','POST','PATCH','DELETE','PUT','OPTIONS','REPORT']))) {
 			$method = $url;
 			$url = null;
 		}
 
-		if(!$url && $this->prefix) {
+		if (!$url && $this->prefix) {
 			$url = $this->prefix;
 		}
 		else {
-			if(!$url) {
+			if (!$url) {
 				$url = '{**}';
 			}
 			$url = $this->prefix . $url;
 		}
 
-		if(!$method) {
+		if (!$method) {
 			$method = ['GET','POST'];
 		}
-		if(!is_array($method)) {
+		if (!is_array($method)) {
 			$method = [ $method ];
 		}
-		if(!is_callable($handler)) {
+		if (!is_callable($handler)) {
 			throw new RouteException('No valid handler found');
 		}
 
 		$url = $this->compile($url);
-		foreach($method as $m) {
-			if(!isset($this->routes[$m])) {
+		foreach ($method as $m) {
+			if (!isset($this->routes[$m])) {
 				$this->routes[$m] = [];
 			}
 			$this->routes[$m][$url] = $handler;
@@ -170,37 +170,37 @@ class Route
 	}
 
 	public function run(\vakata\http\UrlInterface $url, \vakata\http\RequestInterface $req, \vakata\http\ResponseInterface $res) {
-		if($this->isRun() || $this->isEmpty()) {
+		if ($this->isRun() || $this->isEmpty()) {
 			return;
 		}
 		$this->ran = true;
 		$request = str_replace('//', '/', '/'.urldecode(trim($url->request(), '/')).'/');
 		$matches = [];
 		try {
-			foreach($this->preprocessors as $regex => $proc) {
-				if(preg_match($regex, $request, $matches)) {
+			foreach ($this->preprocessors as $regex => $proc) {
+				if (preg_match($regex, $request, $matches)) {
 					$arg = explode('/',trim($request, '/'));
-					foreach($matches as $k => $v) {
-						if(!is_int($k)) {
+					foreach ($matches as $k => $v) {
+						if (!is_int($k)) {
 							$arg[$k] = trim($v,'/');
 						}
 					}
-					foreach($proc as $h) {
-						if($this->invoke($h, $arg, $req, $res, $url) === false) {
+					foreach ($proc as $h) {
+						if ($this->invoke($h, $arg, $req, $res, $url) === false) {
 							return false;
 						}
 					}
 				}
 			}
 			$arg = explode('/',trim($request, '/'));
-			if(isset($this->all)) {
+			if (isset($this->all)) {
 				return $this->invoke($this->all, $arg, $req, $res, $url);
 			}
-			if(isset($this->routes[$req->getMethod()])) {
-				foreach($this->routes[$req->getMethod()] as $regex => $route) {
-					if(preg_match($regex, $request, $matches)) {
-						foreach($matches as $k => $v) {
-							if(!is_int($k)) {
+			if (isset($this->routes[$req->getMethod()])) {
+				foreach ($this->routes[$req->getMethod()] as $regex => $route) {
+					if (preg_match($regex, $request, $matches)) {
+						foreach ($matches as $k => $v) {
+							if (!is_int($k)) {
 								$arg[$k] = trim($v,'/');
 							}
 						}
@@ -213,15 +213,15 @@ class Route
 		catch (\Exception $e) {
 			$res->removeHeaders();
 			$res->setBody(null);
-			// while(ob_get_level()) { ob_end_clean(); }
-			if(isset($this->err)) {
+			// while (ob_get_level()) { ob_end_clean(); }
+			if (isset($this->err)) {
 				return $this->invoke($this->err, $arg, $req, $res, $url, $e);
 			}
 
 			@error_log('PHP Exception:' . ((int)$e->getCode() ? ' ' . $e->getCode() . ' -' : '') . ' ' . $e->getMessage() . ' in '.$e->getFile().' on line '.$e->getLine());
 
 			$res->setStatusCode($e->getCode() >= 200 && $e->getCode() <= 503 ? $e->getCode() : 500);
-			switch($req->getResponseFormat()) {
+			switch ($req->getResponseFormat()) {
 				case 'json':
 					$res->setContentType('json');
 					$res->setBody(json_encode($e->getMessage()));
@@ -237,15 +237,15 @@ class Route
 					echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Грешка</title></head><body style="background:#ebebeb;">';
 					echo '<h1 style="font-size:1.4em; text-align:center; margin:2em 0 0 0; color:#8b0000; text-shadow:1px 1px 0 white;">В момента не можем да обслужим заявката Ви.</h1>' . "\n\n";
 
-					if(defined('DEBUG') && DEBUG) {
+					if (defined('DEBUG') && DEBUG) {
 						echo '<h2 style="color:#222; font-size:1.2em; margin:1em 0 1em 0; text-align:center; text-shadow:1px 1px 0 white;">' . preg_replace('/, called in.*/','',$e->getMessage()) . '</h2>';
 						echo '<pre style="max-width:960px; margin:1em auto; border:1px solid silver; background:white; border-radius:4px; padding-bottom:1em; overflow:hidden;">';
 						echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:1em;">'.(@$e->getFile()).' : '.(@$e->getLine()).'</strong>';
 						$file = @file($e->getFile());
 						$line = (int)@$e->getLine() - 1;
-						if($file && $line) {
-							for($i = max($line - 5, 0); $i < max($line - 5, 0) + 11; $i++) {
-								if(!isset($file[$i])) { break; }
+						if ($file && $line) {
+							for ($i = max($line - 5, 0); $i < max($line - 5, 0) + 11; $i++) {
+								if (!isset($file[$i])) { break; }
 								echo '<div style="padding:0 1em; line-height:2em; '. ($line === $i ? 'background:lightyellow; position:relative; color:#8b0000; font-weight:bold; box-shadow:0 0 2px rgba(0,0,0,0.7)' : 'background:'.($i%2 ? '#ebebeb' : 'white').';') . '">';
 								echo '<strong style="float:left; width:40px;">' . ($i + 1). '. </strong> ' . htmlspecialchars(trim($file[$i],"\r\n")) . "\n";
 								echo '</div>';
@@ -254,8 +254,8 @@ class Route
 						echo '</pre>';
 						echo '<pre style="max-width:960px; margin:1em auto; border:1px solid silver; background:white; border-radius:4px; padding-bottom:1em; overflow:hidden;">';
 						echo '<strong style="display:block; background:#ebebeb; text-align:center; border-bottom:1px solid silver; line-height:2em; margin-bottom:1em;">Trace</strong>';
-						foreach($e->getTrace() as $k => $trace) {
-							if($k === 0) {
+						foreach ($e->getTrace() as $k => $trace) {
+							if ($k === 0) {
 								$trace['file'] = @$e->getFile();
 								$trace['line'] = @$e->getLine();
 							}
@@ -263,7 +263,7 @@ class Route
 							echo '<span style="display:inline-block; min-width:550px;"><code style="color:green">'.(isset($trace['file'])?$trace['file']:'').'</code>';
 							echo '<code style="color:gray"> '.(isset($trace['file'])?':':'').' </code>';
 							echo '<code style="color:#8b0000">'.(isset($trace['line'])?$trace['line']:'').'</code></span> ';
-							if(isset($trace['class'])) {
+							if (isset($trace['class'])) {
 								echo '<code style="color:navy">'.$trace['class'].$trace['type'].$trace['function'].'()</code>';
 							}
 							else {

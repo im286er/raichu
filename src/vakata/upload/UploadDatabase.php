@@ -19,7 +19,7 @@ class UploadDatabase extends Upload
 		$file = parent::upload($needle, $chunk);
 		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array(str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location)));
 		try {
-			if($id) {
+			if ($id) {
 				$this->db->query(
 					'UPDATE '.$this->tb.' SET size = ?, uploaded = ?, hash = ? WHERE id = ?',
 					array(

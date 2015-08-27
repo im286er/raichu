@@ -21,25 +21,25 @@ abstract class AbstractOAuth extends AbstractAuthentication
 		$this->callback_url  = $callback_url;
 	}
 	public function authenticate($data = null) {
-		if(strpos(strtolower(trim($_SERVER['REQUEST_URI'],'/')), $this->provider()) === false) {
+		if (strpos(strtolower(trim($_SERVER['REQUEST_URI'],'/')), $this->provider()) === false) {
 			return null;
 		}
-		if(strpos(trim($_SERVER['REQUEST_URI'],'/'), preg_replace('(^https?://[^/]+/)i','',$this->callback_url)) === false) {
-			while(ob_get_level()) { ob_end_clean(); }
-			header('Location: ' . 
-				$this->authorize_url . 
-					'client_id='    . urlencode($this->public_key) . '&' . 
-					'scope='        . urlencode($this->permissions) . '&' . 
-					'redirect_uri=' . urlencode($this->callback_url) . '&' . 
+		if (strpos(trim($_SERVER['REQUEST_URI'],'/'), preg_replace('(^https?://[^/]+/)i','',$this->callback_url)) === false) {
+			while (ob_get_level()) { ob_end_clean(); }
+			header('Location: ' .
+				$this->authorize_url .
+					'client_id='    . urlencode($this->public_key) . '&' .
+					'scope='        . urlencode($this->permissions) . '&' .
+					'redirect_uri=' . urlencode($this->callback_url) . '&' .
 					'state='        . $this->state()
 			);
 			die();
 		}
 		else {
-			if(isset($_GET['error_reason']) || isset($_GET['error']) || !isset($_GET['code'])) {
+			if (isset($_GET['error_reason']) || isset($_GET['error']) || !isset($_GET['code'])) {
 				throw new UserException('Грешка при взимането на токен');
 			}
-			if(!isset($_GET['state']) || $_GET['state'] !== $this->state()) {
+			if (!isset($_GET['state']) || $_GET['state'] !== $this->state()) {
 				throw new UserException('Грешка при валидация на състоянието');
 			}
 			$access_token = @file_get_contents($this->token_url, false, stream_context_create([
@@ -55,21 +55,21 @@ abstract class AbstractOAuth extends AbstractAuthentication
 					])
 				]
 			]));
-			if(!$access_token) {
+			if (!$access_token) {
 				throw new UserException('Грешка при взимането на токен');
 			}
-			if(@json_decode($access_token, true)) {
+			if (@json_decode($access_token, true)) {
 				$access_token = @json_decode($access_token, true);
 			}
 			else {
 				parse_str($access_token, $access_token);
 			}
-			if(!$access_token || !is_array($access_token) || !isset($access_token['access_token'])) {
+			if (!$access_token || !is_array($access_token) || !isset($access_token['access_token'])) {
 				throw new UserException('Грешка при взимането на токен');
 			}
 			$access_token = $access_token['access_token'];
 			$user_details = @file_get_contents($this->info_url . 'access_token=' . rawurlencode($access_token));
-			if(!$user_details || !($user_details = @json_decode($user_details, true)) || isset($user_details['error'])) {
+			if (!$user_details || !($user_details = @json_decode($user_details, true)) || isset($user_details['error'])) {
 				throw new UserException('Грешка при извличането на потребител');
 			}
 			return $user_details;

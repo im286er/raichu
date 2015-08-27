@@ -10,19 +10,19 @@ class Upload implements UploadInterface
 		$this->dir = $dir;
 	}
 	public function upload($needle, $chunk = 0) {
-		if(!isset($_FILES) || !is_array($_FILES) || !isset($_FILES[$needle])) {
+		if (!isset($_FILES) || !is_array($_FILES) || !isset($_FILES[$needle])) {
 			throw new UploadException('Uploaded file not found');
 		}
-		if((int)$_FILES[$needle]['error']) {
+		if ((int)$_FILES[$needle]['error']) {
 			throw new UploadException('File upload error', 404);
 		}
-		if(!(int)$_FILES[$needle]["size"]) {
+		if (!(int)$_FILES[$needle]["size"]) {
 			throw new UploadException('File upload invalid filesize', 404);
 		}
-		if(!is_dir($this->dir) && !mkdir($this->dir, 0777, true)) {
+		if (!is_dir($this->dir) && !mkdir($this->dir, 0777, true)) {
 			throw new UploadException('Could not create upload directory.', 500);
 		}
-		if(!is_writable($this->dir) && !chmod($this->dir, 0777)) {
+		if (!is_writable($this->dir) && !chmod($this->dir, 0777)) {
 			throw new UploadException('Upload directory not writable.', 500);
 		}
 
@@ -32,9 +32,9 @@ class Upload implements UploadInterface
 		$cnt = 0;
 		do {
 			$new = $this->dir . DIRECTORY_SEPARATOR . $fnm . '_' . $cnt;
-		} while(file_exists($new) && ++$cnt < 1000000);
-		if($chunk) {
-			if(!$cnt) {
+		} while (file_exists($new) && ++$cnt < 1000000);
+		if ($chunk) {
+			if (!$cnt) {
 				throw new UploadException('Could not merge chunk', 500);
 			}
 			$new = $this->dir . DIRECTORY_SEPARATOR . $fnm . '_' . ($cnt - 1);
@@ -43,19 +43,19 @@ class Upload implements UploadInterface
 			unlink($new . '_chunk');
 		}
 		else {
-			if(!move_uploaded_file($_FILES[$needle]['tmp_name'], $new)) {
+			if (!move_uploaded_file($_FILES[$needle]['tmp_name'], $new)) {
 				throw new UploadException('Could not move uploaded file', 404);
 			}
 			@chmod($new, 0644);
 		}
 		return new FileUpload(basename($new), $this->dir);
 	}
-	public function hasFiles() { 
-		if(!isset($_FILES) || !is_array($_FILES) || !count($_FILES)) {
+	public function hasFiles() {
+		if (!isset($_FILES) || !is_array($_FILES) || !count($_FILES)) {
 			return false;
 		}
-		foreach($_FILES as $k => $v) {
-			if(is_uploaded_file($v['tmp_name'])) {
+		foreach ($_FILES as $k => $v) {
+			if (is_uploaded_file($v['tmp_name'])) {
 				return true;
 			}
 		}
@@ -63,10 +63,10 @@ class Upload implements UploadInterface
 	}
 	public function maxSize() {
 		$size = array(ini_get('upload_max_filesize'), ini_get('post_max_size'));
-		foreach($size as $k => $val) {
+		foreach ($size as $k => $val) {
 			$unit = strtolower($val[strlen($val)-1]);
 			$val = (int)$val;
-			switch($unit) {
+			switch ($unit) {
 				case 'g':
 					$val *= 1024;
 				case 'm':

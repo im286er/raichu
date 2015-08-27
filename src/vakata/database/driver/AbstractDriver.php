@@ -33,34 +33,34 @@ abstract class AbstractDriver implements DriverInterface
 	public function execute($sql, array $data = null) {
 		$this->connect();
 		$binder = '?';
-		if(strpos($sql, $binder) !== false && is_array($data) && count($data)) {
+		if (strpos($sql, $binder) !== false && is_array($data) && count($data)) {
 			$tmp = explode($binder, $sql);
 			$data = array_values($data);
-			if(count($data) >= count($tmp)) {
+			if (count($data) >= count($tmp)) {
 				$data = array_slice($data, 0, count($tmp) - 1);
 			}
 			$sql = $tmp[0];
-			foreach($data as $i => $v) {
+			foreach ($data as $i => $v) {
 				$sql .= $this->escape($v) . $tmp[($i + 1)];
 			}
 		}
 		return $this->real($sql);
 	}
 	public function escape($input) {
-		if(is_array($input)) {
-			foreach($input as $k => $v) {
+		if (is_array($input)) {
+			foreach ($input as $k => $v) {
 				$input[$k] = $this->escape($v);
 			}
 			return implode(',', $input);
 		}
-		if(is_string($input)) {
+		if (is_string($input)) {
 			$input = addslashes($input);
 			return "'".$input."'";
 		}
-		if(is_bool($input)) {
+		if (is_bool($input)) {
 			return $input === false ? 0 : 1;
 		}
-		if(is_null($input)) {
+		if (is_null($input)) {
 			return 'NULL';
 		}
 		return $input;

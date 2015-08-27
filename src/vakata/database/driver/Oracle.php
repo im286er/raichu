@@ -8,27 +8,27 @@ class Oracle extends AbstractDriver
 	protected $transaction = false;
 
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$this->lnk = ($this->settings->persist) ?
 					@oci_pconnect($this->settings->username, $this->settings->password, $this->settings->servername, $this->settings->charset) :
 					@oci_connect($this->settings->username, $this->settings->password, $this->settings->servername, $this->settings->charset);
-			if($this->lnk === false) {
+			if ($this->lnk === false) {
 				throw new DatabaseException('Connect error : ' . oci_error());
 			}
-			if($this->settings->timezone) {
+			if ($this->settings->timezone) {
 				$this->real_query("ALTER session SET time_zone = '" . addslashes($this->settings->timezone) . "'");
 			}
 		}
 	}
 	protected function disconnect() {
-		if(is_resource($this->lnk)) {
+		if (is_resource($this->lnk)) {
 			oci_close($this->lnk);
 		}
 	}
 	protected function real($sql) {
 		$this->connect();
 		$temp = oci_parse($this->lnk, $sql);
-		if(!$temp || !oci_execute($temp, $this->transaction ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS)) {
+		if (!$temp || !oci_execute($temp, $this->transaction ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS)) {
 			throw new DatabaseException('Could not execute real query : ' . oci_error($temp));
 		}
 		$this->aff = oci_num_rows($temp);
@@ -38,12 +38,12 @@ class Oracle extends AbstractDriver
 	public function prepare($sql) {
 		$this->connect();
 		$binder = '?';
-		if(strpos($sql, $binder) !== false) {
+		if (strpos($sql, $binder) !== false) {
 			$tmp = explode($binder, $sql);
 			$sql = '';
-			foreach($tmp as $i => $v) {
+			foreach ($tmp as $i => $v) {
 				$sql .= $v;
-				if(isset($tmp[($i + 1)])) {
+				if (isset($tmp[($i + 1)])) {
 					$sql .= ':f' . $i;
 				}
 			}
@@ -52,12 +52,12 @@ class Oracle extends AbstractDriver
 	}
 	public function execute($sql, array $data = null) {
 		$this->connect();
-		if(!is_array($data)) {
+		if (!is_array($data)) {
 			$data = array();
 		}
 		$data = array_values($data);
-		foreach($data as $i => $v) {
-			switch(gettype($v)) {
+		foreach ($data as $i => $v) {
+			switch (gettype($v)) {
 				case "boolean":
 				case "integer":
 					$data[$i] = (int)$v;
@@ -78,7 +78,7 @@ class Oracle extends AbstractDriver
 			}
 		}
 		$temp = oci_execute($sql, $this->transaction ? OCI_NO_AUTO_COMMIT : OCI_COMMIT_ON_SUCCESS);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . oci_error($sql));
 		}
 		$this->aff = oci_num_rows($sql);
@@ -100,10 +100,10 @@ class Oracle extends AbstractDriver
 	}
 	public function commit() {
 		$this->connect();
-		if(!$this->transaction) {
+		if (!$this->transaction) {
 			return false;
 		}
-		if(!oci_commit($this->lnk)) {
+		if (!oci_commit($this->lnk)) {
 			return false;
 		}
 		$this->transaction = false;
@@ -111,10 +111,10 @@ class Oracle extends AbstractDriver
 	}
 	public function rollback() {
 		$this->connect();
-		if(!$this->transaction) {
+		if (!$this->transaction) {
 			return false;
 		}
-		if(!oci_rollback($this->lnk)) {
+		if (!oci_rollback($this->lnk)) {
 			return false;
 		}
 		$this->transaction = false;

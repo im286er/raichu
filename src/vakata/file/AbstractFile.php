@@ -44,11 +44,11 @@ class AbstractFile implements FileInterface
 		return isset($this->data[$property]) ? $this->data[$property] : null;
 	}
 	public function &content() {
-		if(!isset($this->data['location'])) {
+		if (!isset($this->data['location'])) {
 			throw new FileException('Invalid file', 404);
 		}
 		$temp = file_get_contents($this->data['location']);
-		if($temp === false) {
+		if ($temp === false) {
 			throw new FileException('Invalid file', 404);
 		}
 		return $temp;
@@ -58,22 +58,22 @@ class AbstractFile implements FileInterface
 		$extension = $file_name ? substr($file_name, strrpos($file_name, ".") + 1) : $this->extension;
 		$file_name = $file_name ? : $this->name;
 
-		if( ((int)$width || (int)$height) && $this->location && in_array(strtolower($extension), array('png','jpg','gif','jpeg','bmp'))) {
+		if ( ((int)$width || (int)$height) && $this->location && in_array(strtolower($extension), array('png','jpg','gif','jpeg','bmp'))) {
 			$width  = min(4096, (int)$width);
 			$height = min(4096, (int)$height);
 			$cropped_name = $this->location.'_'.(int)$width.'x'.(int)$height;
-			if(!is_file($cropped_name) || !is_readable($cropped_name)) {
-				if(extension_loaded('imagick')) {
-					try { 
+			if (!is_file($cropped_name) || !is_readable($cropped_name)) {
+				if (extension_loaded('imagick')) {
+					try {
 						$tmp = new \imagick($this->location);
-						if(!$height || !$width) {
+						if (!$height || !$width) {
 							$iw = $tmp->getImageWidth();
 							$ih = $tmp->getImageHeight();
-							if(!$width)  { $width  = $height / $ih * $iw; }
-							if(!$height) { $height = $width  / $iw * $ih; }
+							if (!$width)  { $width  = $height / $ih * $iw; }
+							if (!$height) { $height = $width  / $iw * $ih; }
 						}
 						$tmp->cropThumbnailImage((int)$width, (int)$height);
-						if(!@$tmp->writeImage($cropped_name)) {
+						if (!@$tmp->writeImage($cropped_name)) {
 							$file_name		= preg_replace('@\.'.preg_quote($this->extension).'$@i', '_'.$width.'x'.$height.'.'.$this->extension, $file_name);
 							$this->content	= (string)$tmp;
 							$this->size		= mb_strlen($this->content, '8bit');
@@ -84,16 +84,16 @@ class AbstractFile implements FileInterface
 						throw new FileException('Could not create / read thumbnal', 500);
 					}
 				}
-				else if(extension_loaded('gd') && function_exists('gd_info')) {
+				elseif (extension_loaded('gd') && function_exists('gd_info')) {
 					try {
 						$tm = getimagesize($this->location);
 						$iw = $tm[0];
 						$ih = $tm[1];
-						if(!$height || !$width) {
-							if(!$width)  { $width  = $height / $ih * $iw; }
-							if(!$height) { $height = $width  / $iw * $ih; }
+						if (!$height || !$width) {
+							if (!$width)  { $width  = $height / $ih * $iw; }
+							if (!$height) { $height = $width  / $iw * $ih; }
 						}
-						switch(strtolower($this->extension)) {
+						switch (strtolower($this->extension)) {
 							case 'jpeg':
 							case 'jpg':
 								$si = imagecreatefromjpeg($this->location);
@@ -120,7 +120,7 @@ class AbstractFile implements FileInterface
 
 						$di = imagecreatetruecolor($width, $height);
 						imagecopyresampled($di, $si, 0, 0, ($iw - $width) / 2, ($ih - $height) / 2, $width, $height, $width, $height);
-						switch(strtolower($this->extension)) {
+						switch (strtolower($this->extension)) {
 							case 'jpeg':
 							case 'jpg':
 								imagejpeg($di, $cropped_name, 100);
@@ -146,7 +146,7 @@ class AbstractFile implements FileInterface
 					}
 				}
 			}
-			if(is_file($cropped_name) && is_readable($cropped_name)) {
+			if (is_file($cropped_name) && is_readable($cropped_name)) {
 				$res->file(new FileDisk($cropped_name), $file_name);
 				return $res;
 			}

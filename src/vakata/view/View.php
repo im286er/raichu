@@ -15,7 +15,7 @@ class View
 	}
 
 	public function add($name, $value = null) {
-		if(is_array($name) && $value === null) {
+		if (is_array($name) && $value === null) {
 			$this->data = array_merge($this->data, $name);
 		}
 		else {
@@ -30,7 +30,7 @@ class View
 			ob_start();
 			include $this->file;
 			$data = ob_get_clean();
-			if($master) {
+			if ($master) {
 				$data = (new self($master, $masterData))->add('data', $data)->render();
 			}
 			return $data;
@@ -45,7 +45,7 @@ class View
 		return (new self($file, $data))->render();
 	}
 	public static function share($var, $value = null) {
-		if(is_array($var) && $value === null) {
+		if (is_array($var) && $value === null) {
 			static::$vars = array_merge(static::$vars, $var);
 		}
 		else {
@@ -53,7 +53,7 @@ class View
 		}
 	}
 	public static function dir($dir) {
-		if(!realpath($dir)) {
+		if (!realpath($dir)) {
 			throw new ViewException('Invalid dir');
 		}
 		static::$dirs[] = realpath($dir);
@@ -70,11 +70,11 @@ class View
 	}
 	
 	protected static function normalize($view) {
-		if(!preg_match('(\.php$)i',$view)) {
+		if (!preg_match('(\.php$)i',$view)) {
 			$view .= '.php';
 		}
-		foreach(static::$dirs as $dir) {
-			if(is_file($dir . DIRECTORY_SEPARATOR . $view) && is_readable($dir . DIRECTORY_SEPARATOR . $view)) {
+		foreach (static::$dirs as $dir) {
+			if (is_file($dir . DIRECTORY_SEPARATOR . $view) && is_readable($dir . DIRECTORY_SEPARATOR . $view)) {
 				return $dir . DIRECTORY_SEPARATOR . $view;
 			}
 		}

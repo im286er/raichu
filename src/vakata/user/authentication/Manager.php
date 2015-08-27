@@ -9,9 +9,9 @@ class Manager implements AuthenticationInterface
 	protected $prov = '';
 
 	public function __construct(array $services = null) {
-		if($services) {
-			foreach($services as $service) {
-				if($service instanceof AuthenticationInterface) {
+		if ($services) {
+			foreach ($services as $service) {
+				if ($service instanceof AuthenticationInterface) {
 					$this->services[] = $service;
 				}
 			}
@@ -22,9 +22,9 @@ class Manager implements AuthenticationInterface
 		return $this->prov;
 	}
 	public function authenticate($data = null) {
-		foreach($this->services as $service) {
+		foreach ($this->services as $service) {
 			$temp = $service->authenticate($data);
-			if($temp) {
+			if ($temp) {
 				$this->prov = $service->provider();
 				return $temp;
 			}
@@ -32,12 +32,12 @@ class Manager implements AuthenticationInterface
 		return null;
 	}
 	public function clear() {
-		foreach($this->services as $service) {
+		foreach ($this->services as $service) {
 			$service->clear();
 		}
 	}
 	public function restore($data = null) {
-		foreach($this->services as $service) {
+		foreach ($this->services as $service) {
 			try {
 				return $service->restore($data);
 			}

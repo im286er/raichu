@@ -40,11 +40,11 @@ class ZipDecorator implements ArchiveInterface
 	public function listing() {
 		try {
 			$za = new \ZipArchive();
-			if($za->open($this->location()) !== true) {
+			if ($za->open($this->location()) !== true) {
 				return [];
 			}
 			$tmp = [];
-			for($i = 0; $i < $za->numFiles; $i++) {
+			for ($i = 0; $i < $za->numFiles; $i++) {
 				$tmp[] = mb_convert_encoding($za->getNameIndex($i), 'UTF-8','CP866');
 			}
 			return $tmp;

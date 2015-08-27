@@ -15,13 +15,13 @@ class DecoratorPermissions implements AuthenticationInterface
 	}
 	public function authenticate($data = null) {
 		$temp = $this->auth->authenticate($data);
-		if($temp) {
-			if(isset($temp[$this->perm])) {
+		if ($temp) {
+			if (isset($temp[$this->perm])) {
 				$perm = @json_decode($temp[$this->perm]);
-				if(!isset($temp['permissions']) || !is_array($temp['permissions'])) {
+				if (!isset($temp['permissions']) || !is_array($temp['permissions'])) {
 					$temp['permissions'] = [];
 				}
-				if(is_array($perm)) {
+				if (is_array($perm)) {
 					$temp['permissions'] = array_merge($perm, $temp['permissions']);
 				}
 			}

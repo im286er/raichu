@@ -4,14 +4,14 @@ namespace vakata\payment;
 abstract class AbstractPayment implements PaymentInterface
 {
 	public function redirect($url, array $post = null) {
-		while(ob_get_level()) { ob_end_clean(); }
-		if($post) {
+		while (ob_get_level()) { ob_end_clean(); }
+		if ($post) {
 			echo '<!DOCTYPE html>' . "\n";
 			echo '<html>' . "\n";
 			echo '<head><title>Пренасочване ...</title></head>' . "\n";
 			echo '<body onload="document.getElementById(\'payment\').submit();">' . "\n";
 			echo '<form id="payment" action="'.htmlspecialchars($url).'" method="post">' . "\n";
-			foreach($post as $k => $v) {
+			foreach ($post as $k => $v) {
 				echo '<input type="hidden" name="'.htmlspecialchars($k).'" value="'.htmlspecialchars($v).'" />' . "\n";
 			}
 			echo '<button type="submit">Продължи</button>' . "\n";
@@ -21,7 +21,7 @@ abstract class AbstractPayment implements PaymentInterface
 			echo '</html>' . "\n";
 		}
 		else {
-			if(!headers_sent()) {
+			if (!headers_sent()) {
 				header('Location: '.$url);
 			}
 			else {
@@ -37,8 +37,8 @@ abstract class AbstractPayment implements PaymentInterface
 				'user_agent' => $ua
 			)
 		);
-		if(!$raw) {
-			if(is_array($data)) {
+		if (!$raw) {
+			if (is_array($data)) {
 				$data = http_build_query($data);
 			}
 			$context['http']['header'] = "Content-type: application/x-www-form-urlencoded\r\n" . "Content-Length: " . strlen($data) . "\r\n";

@@ -5,7 +5,7 @@ class FileDisk extends AbstractFile
 {
 	public function __construct($path) {
 		$path = realpath($path);
-		if(!$path || !is_file($path) || !is_readable($path)) {
+		if (!$path || !is_file($path) || !is_readable($path)) {
 			throw new FileException('File not found', 404);
 		}
 		$this->data['id']			= $path;

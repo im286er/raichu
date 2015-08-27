@@ -18,34 +18,34 @@ class Settings
 	public function __construct($settings) {
 		$this->original = $settings;
 		$str = parse_url($settings);
-		if($str) {
-			if(array_key_exists('scheme',$str)) {
+		if ($str) {
+			if (array_key_exists('scheme',$str)) {
 				$this->type			= rawurldecode($str['scheme']);
 			}
-			if(array_key_exists('user',$str)) {
+			if (array_key_exists('user',$str)) {
 				$this->username		= rawurldecode($str['user']);
 			}
-			if(array_key_exists('pass',$str)) {
+			if (array_key_exists('pass',$str)) {
 				$this->password		= rawurldecode($str['pass']);
 			}
-			if(array_key_exists('path',$str)) {
+			if (array_key_exists('path',$str)) {
 				$this->database		= trim(rawurldecode($str['path']),'/');
 			}
-			if(array_key_exists('host',$str)) {
+			if (array_key_exists('host',$str)) {
 				$this->servername	= rawurldecode($str['host']);
 			}
-			if(array_key_exists('port',$str)) {
+			if (array_key_exists('port',$str)) {
 				$this->serverport	= rawurldecode($str['port']);
 			}
 			$this->options = array();
-			if(array_key_exists('query',$str)) {
+			if (array_key_exists('query',$str)) {
 				parse_str($str['query'], $str);
 				$this->options = $str;
 				$this->persist = (array_key_exists('persist', $str) && $str['persist'] === 'TRUE');
-				if(array_key_exists('charset', $str)) {
+				if (array_key_exists('charset', $str)) {
 					$this->charset = $str['charset'];
 				}
-				if(array_key_exists('timezone', $str)) {
+				if (array_key_exists('timezone', $str)) {
 					$this->timezone = $str['timezone'];
 				}
 			}
@@ -58,7 +58,7 @@ class Settings
 			$this->options = array();
 			parse_str($str[1], $this->options);
 			$str = $str[0];
-			if(strpos($str, '@') !== false) {
+			if (strpos($str, '@') !== false) {
 				$str = array_pad(explode('@', $str, 2), 2, '');
 				list($this->username, $this->password) = array_pad(explode(':', $str[0], 2), 2, '');
 				$str = $str[1];

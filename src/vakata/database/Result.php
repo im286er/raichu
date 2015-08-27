@@ -21,25 +21,25 @@ class Result implements ResultInterface, \JsonSerializable
 		$this->opti = $opti;
 	}
 	public function count() {
-		if(!$this->rslt->countable() && !$this->rdy) {
+		if (!$this->rslt->countable() && !$this->rdy) {
 			$this->get();
 		}
 		return $this->rdy ? count($this->all) : $this->rslt->count();
 	}
 	public function current() {
-		if(($this->rslt->countable() || $this->rdy) && !$this->count()) {
+		if (($this->rslt->countable() || $this->rdy) && !$this->count()) {
 			return null;
 		}
-		if($this->rdy) {
+		if ($this->rdy) {
 			return current($this->all);
 		}
 		$tmp = $this->rslt->row();
 		$row = [];
 
-		switch($this->mode) {
+		switch ($this->mode) {
 			case 'num':
-				foreach($tmp as $k => $v) {
-					if(is_int($k)) {
+				foreach ($tmp as $k => $v) {
+					if (is_int($k)) {
 						$row[$k] = $v;
 					}
 				}
@@ -49,51 +49,51 @@ class Result implements ResultInterface, \JsonSerializable
 				break;
 			case 'assoc':
 			default:
-				foreach($tmp as $k => $v) {
-					if(!is_int($k)) {
+				foreach ($tmp as $k => $v) {
+					if (!is_int($k)) {
 						$row[$k] = $v;
 					}
 				}
 				break;
 		}
-		if($this->fake) {
+		if ($this->fake) {
 			$this->fake_key = $row[$this->fake];
 		}
-		if($this->skip) {
+		if ($this->skip) {
 			unset($row[$this->fake]);
 		}
-		if($this->opti && is_array($row) && count($row) <= 1) {
+		if ($this->opti && is_array($row) && count($row) <= 1) {
 			$row = count($row) ? current($row) : current($tmp);
 		}
 		return $this->mode === 'obj' && is_array($row) ? (object)$row : $row;
 	}
 	public function key() {
-		if($this->rdy) {
+		if ($this->rdy) {
 			return key($this->all);
 		}
 		return $this->fake ? $this->fake_key : $this->real_key;
 	}
 	public function next() {
-		if($this->rdy) {
+		if ($this->rdy) {
 			return next($this->all);
 		}
 		$this->rslt->nextr();
 		$this->real_key++;
 	}
 	public function rewind() {
-		if($this->real_key !== 0 && !$this->rdy && !$this->rslt->seekable()) {
+		if ($this->real_key !== 0 && !$this->rdy && !$this->rslt->seekable()) {
 			$this->get();
 		}
-		if($this->rdy) {
+		if ($this->rdy) {
 			return reset($this->all);
 		}
-		if($this->rslt->seekable()) {
+		if ($this->rslt->seekable()) {
 			$this->rslt->seek(($this->real_key = 0));
 		}
 		$this->rslt->nextr();
 	}
 	public function valid() {
-		if($this->rdy) {
+		if ($this->rdy) {
 			return current($this->all) !== false;
 		}
 		return $this->rslt->row() !== false && $this->rslt->row() !== null;
@@ -104,9 +104,9 @@ class Result implements ResultInterface, \JsonSerializable
 		return $this->current();
 	}
 	public function get() {
-		if(!$this->rdy) {
+		if (!$this->rdy) {
 			$this->all = [];
-			foreach($this as $k => $v) {
+			foreach ($this as $k => $v) {
 				$this->all[$k] = $v;
 			}
 			$this->rdy = true;
@@ -114,11 +114,11 @@ class Result implements ResultInterface, \JsonSerializable
 		return $this->all;
 	}
 	public function offsetExists($offset) {
-		if($this->rdy) {
+		if ($this->rdy) {
 			return isset($this->all[$offset]);
 		}
-		if($this->fake === null && $this->rslt->seekable()) {
-			if($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
+		if ($this->fake === null && $this->rslt->seekable()) {
+			if ($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
 				return false;
 			}
 			return $this->rslt->row() !== false && $this->rslt->row() !== null;
@@ -127,11 +127,11 @@ class Result implements ResultInterface, \JsonSerializable
 		return isset($this->all[$offset]);
 	}
 	public function offsetGet($offset) {
-		if($this->rdy) {
+		if ($this->rdy) {
 			return $this->all[$offset];
 		}
-		if($this->fake === null && $this->rslt->seekable()) {
-			if($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
+		if ($this->fake === null && $this->rslt->seekable()) {
+			if ($this->rslt->seek(($this->real_key = $offset)) === false || $this->rslt->nextr() === false) {
 				return null;
 			}
 			return $this->current();

@@ -9,17 +9,17 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 
 	public function __construct(DatabaseInterface $database, $table, array $searchable = []) {
 		$this->definition = [ 'name' => $table, 'primary_key' => [], 'columns' => [], 'definitions' => [], 'indexed' => [], 'searchable' => [] ];
-		switch($database->driver()) {
+		switch ($database->driver()) {
 			case 'mysql':
 			case 'mysqli':
-				foreach($database->all('SHOW FULL COLUMNS FROM '.$table) as $data) {
+				foreach ($database->all('SHOW FULL COLUMNS FROM '.$table) as $data) {
 					$this->definition['columns'][] = $data['Field'];
 					$this->definition['definitions'][$data['Field']] = $data;
-					if($data['Key'] == 'PRI') {
+					if ($data['Key'] == 'PRI') {
 						$this->definition['primary_key'][] = $data['Field'];
 					}
 				}
-				foreach($database->all('SHOW INDEX FROM '.$table.' WHERE Index_type = \'FULLTEXT\'') as $data) {
+				foreach ($database->all('SHOW INDEX FROM '.$table.' WHERE Index_type = \'FULLTEXT\'') as $data) {
 					$this->definition['indexed'][] = $data['Column_name'];
 				}
 				$this->definition['indexed'] = array_unique($this->definition['indexed']);
@@ -29,7 +29,7 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 				$this->definition['definitions'] = $database->all('SELECT * FROM information_schema.columns WHERE table_name = ? ', [ $table ], 'column_name');
 				$this->definition['columns'] = array_keys($this->definition['definitions']);
 				$tmp = $database->one('SELECT constraint_name FROM information_schema.table_constraints WHERE table_name = ? AND constraint_type = ?', [ $table, 'PRIMARY KEY' ]);
-				if($tmp) {
+				if ($tmp) {
 					$this->definition['primary_key'] = $database->all('SELECT column_name FROM information_schema.key_column_usage WHERE table_name = ? AND constraint_name = ?', [ $table, $tmp ]);
 				}
 				break;
@@ -39,10 +39,10 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 		$this->definition['searchable'] = array_intersect($this->definition['columns'], $searchable);
 	}
 	public function __get($key) {
-		if(isset($this->definition[$key])) {
+		if (isset($this->definition[$key])) {
 			return $this->definition[$key];
 		}
-		if(method_exists($this, 'get' . ucfirst($key))) {
+		if (method_exists($this, 'get' . ucfirst($key))) {
 			return call_user_func([$this, 'get' . ucfirst($key)]);
 		}
 		return null;

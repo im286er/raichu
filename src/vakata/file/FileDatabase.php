@@ -6,7 +6,7 @@ class FileDatabase extends AbstractFile
 	public function __construct($id, $directory, \vakata\database\DatabaseInterface $db, $tb = 'uploads') {
 		parent::__construct();
 		$temp = $db->one('SELECT * FROM '.$tb.' WHERE id = ?', [ (int)$id ]);
-		if(!$temp || !is_file($directory . DIRECTORY_SEPARATOR . $temp['new']) || !is_readable($directory . DIRECTORY_SEPARATOR . $temp['new'])) {
+		if (!$temp || !is_file($directory . DIRECTORY_SEPARATOR . $temp['new']) || !is_readable($directory . DIRECTORY_SEPARATOR . $temp['new'])) {
 			throw new FileException('File not found', 404);
 		}
 		$this->data['id']			= $temp['id'];

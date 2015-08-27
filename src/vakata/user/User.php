@@ -23,10 +23,10 @@ class User implements UserInterface
 	}
 
 	public function __call($key, $args) {
-		if(strpos($key, 'is') === 0) {
+		if (strpos($key, 'is') === 0) {
 			return $this->get(strtolower(substr($key, 2))) == (isset($args[0]) ? $args[0] : true);
 		}
-		if(strpos($key, 'has') === 0 && isset($args[0])) {
+		if (strpos($key, 'has') === 0 && isset($args[0])) {
 			return is_array($this->get(strtolower(substr($key, 3)))) && in_array($args[0], $this->get(strtolower(substr($key, 3))));
 		}
 	}

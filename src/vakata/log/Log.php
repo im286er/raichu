@@ -4,7 +4,7 @@ namespace vakata\log;
 class Log implements LogInterface
 {
 	protected function log($severity, $message, array $context = []) {
-		if(isset($context['exception']) && $context['exception'] instanceof \Exception) {
+		if (isset($context['exception']) && $context['exception'] instanceof \Exception) {
 			$context['exception'] = [
 				'code' => $context['exception']->getCode(),
 				'mess' => $context['exception']->getMessage(),

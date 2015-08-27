@@ -5,10 +5,10 @@ class Epay extends AbstractPayment
 {
 	protected function hash($data) {
 		$passwd = $this->options['secret'];
-		if(strlen($passwd) > 64) {
+		if (strlen($passwd) > 64) {
 			$passwd = pack('H40', sha1($passwd));
 		}
-		if(strlen($passwd)<64) {
+		if (strlen($passwd)<64) {
 			$passwd = str_pad($passwd, 64, chr(0));
 		}
 		$ipad = substr($passwd, 0, 64) ^ str_repeat(chr(0x36), 64);
@@ -27,7 +27,7 @@ class Epay extends AbstractPayment
 			),
 			$options
 		);
-		if($options['test']) {
+		if ($options['test']) {
 			$options['url'] = 'https://devep2.datamax.bg/ep2/epay2_demo/';
 		}
 		$this->options = $options;
@@ -58,33 +58,33 @@ class Epay extends AbstractPayment
 			'ENCODED'	=> $data,
 			'CHECKSUM'	=> $this->hash($data)
 		);
-		if(isset($options['success_url']) && $options['success_url']) {
+		if (isset($options['success_url']) && $options['success_url']) {
 			$result['URL_OK'] = $options['success_url'];
 		}
-		if(isset($options['cancel_url']) && $options['cancel_url']) {
+		if (isset($options['cancel_url']) && $options['cancel_url']) {
 			$result['URL_CANCEL'] = $options['cancel_url'];
 		}
 		return $this->redirect($this->options['url'], $result);
 	}
 	public function ipn(callable $c = null) {
-		while(ob_get_level()) { ob_end_clean(); }
-		if(isset($_POST) && is_array($_POST) && count($_POST)) {
+		while (ob_get_level()) { ob_end_clean(); }
+		if (isset($_POST) && is_array($_POST) && count($_POST)) {
 			@header('Content-Type: text/plain; charset=utf-8');
-			if($_POST['checksum'] == $this->hash($_POST['encoded'])) {
+			if ($_POST['checksum'] == $this->hash($_POST['encoded'])) {
 				$data = base64_decode($_POST['encoded']);
 				$data = explode("\n", $data);
 				$info_data = '';
 				
-				foreach($data as $line) {
-					if(preg_match("/^INVOICE=(\d+):STATUS=(PAID|DENIED|EXPIRED)(:PAY_TIME=(\d+):STAN=(\d+):BCODE=([0-9a-zA-Z]+))?$/", $line, $regs)) {
+				foreach ($data as $line) {
+					if (preg_match("/^INVOICE=(\d+):STATUS=(PAID|DENIED|EXPIRED)(:PAY_TIME=(\d+):STAN=(\d+):BCODE=([0-9a-zA-Z]+))?$/", $line, $regs)) {
 						$invoice	= $regs[1];
 						$status		= $regs[2];
 						$pay_date	= $regs[4];
 						$stan		= $regs[5];
 						$bcode		= $regs[6];
 
-						if($c) {
-							if(call_user_func($c, $invoice, strtolower($status) === 'paid') === true) {
+						if ($c) {
+							if (call_user_func($c, $invoice, strtolower($status) === 'paid') === true) {
 								$info_data .= "INVOICE=$invoice:STATUS=OK\n";
 							}
 							else {
@@ -118,7 +118,7 @@ $pp = new \vakata\payment_paypal(array(
 	'email'		=> 'rsell_1362036653_biz@vakata.com'
 ));
 $pp->ipn();
-if(!count($_GET) && !count($_POST)) {
+if (!count($_GET) && !count($_POST)) {
 	$pp->pay(array(
 		'amount'		=> 12.00,
 		'currency'		=> 'USD',
@@ -135,7 +135,7 @@ $pp = new \vakata\payment_epay(array(
 	'mid'			=> 'D570050645'
 ));
 $pp->ipn();
-if(!count($_GET) && !count($_POST)) {
+if (!count($_GET) && !count($_POST)) {
 	$pp->pay(array(
 		'amount'		=> 12.00,
 		'currency'		=> 'BGN',

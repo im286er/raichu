@@ -8,8 +8,8 @@ class Random
 		$seeds = [];
 		// high
 		$file = '/dev/random';
-		if(@file_exists($file) && ($file = @fopen($file, 'rb'))) {
-			if(function_exists('stream_set_read_buffer')) {
+		if (@file_exists($file) && ($file = @fopen($file, 'rb'))) {
+			if (function_exists('stream_set_read_buffer')) {
 				stream_set_read_buffer($file, 0);
 			}
 			$seeds[] = fread($file, $size);
@@ -21,8 +21,8 @@ class Random
 		}
 		// medium
 		$file = '/dev/urandom';
-		if(@file_exists($file) && ($file = @fopen($file, 'rb'))) {
-			if(function_exists('stream_set_read_buffer')) {
+		if (@file_exists($file) && ($file = @fopen($file, 'rb'))) {
+			if (function_exists('stream_set_read_buffer')) {
 				stream_set_read_buffer($file, 0);
 			}
 			$seeds[] = fread($file, $size);
@@ -51,13 +51,13 @@ class Random
 
 		// combine seeds
 		$result = hash_hmac('sha512', $seeds[0], '', true);
-		for($i = 1; $i < count($seeds); $i++) {
+		for ($i = 1; $i < count($seeds); $i++) {
 			$result ^= hash_hmac('sha512', $seeds[$i], $seeds[$i - 1], true);
 		}
-		while(strlen($result) < $length) {
+		while (strlen($result) < $length) {
 			$result .= static::generate();
 		}
-		if(strlen($result) > $length) {
+		if (strlen($result) > $length) {
 			$result = substr($result, 0, $length);
 		}
 		return $result;
@@ -66,13 +66,13 @@ class Random
 		$rand = static::generate($length * 2);
 		$lngt = mb_strlen($characters, 'UTF-8');
 		$rslt = '';
-		for($i = 0; $i < strlen($rand); $i++) {
+		for ($i = 0; $i < strlen($rand); $i++) {
 			$rslt .= mb_substr($characters, ord($rand[$i]) % $lngt, 1, 'UTF-8');
 		}
 		return mb_substr($rslt, 0, $length, 'UTF-8');
 	}
 	public static function number($min = 0, $max = PHP_INT_MAX) {
-		if($max === $min) { return $max; }
+		if ($max === $min) { return $max; }
 		$rand = static::generate(4);
 		$rand = hexdec(bin2hex($rand));
 		return $min + abs($rand % ($max - $min + 1));

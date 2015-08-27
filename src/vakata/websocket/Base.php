@@ -15,7 +15,7 @@ abstract class Base
 	protected static $fragment_size = 4096;
 
 	public function send(&$socket, $data, $encode = true, $opcode = 'text', $masked = true) {
-		if(!$encode) {
+		if (!$encode) {
 			return fwrite($socket, $data) > 0;
 		}
 		while (strlen($data)) {
@@ -28,12 +28,12 @@ abstract class Base
 		return true;
 	}
 	public function receive(&$socket, $decode = true) {
-		if(!$decode) {
+		if (!$decode) {
 			$data = '';
 			$read = static::$fragment_size;
 			do {
 				$buff = fread($socket, $read);
-				if($buff === false) {
+				if ($buff === false) {
 					return false;
 				}
 				$data .= $buff;
@@ -45,7 +45,7 @@ abstract class Base
 		}
 
 		$data   = fread($socket, 2);
-		if($data === false || strlen($data) < 2) { return false; }
+		if ($data === false || strlen($data) < 2) { return false; }
 		$final  = (bool)(ord($data[0]) & 1 << 7);
 		$rsv1   = (bool)(ord($data[0]) & 1 << 6);
 		$rsv2   = (bool)(ord($data[0]) & 1 << 5);
@@ -55,29 +55,29 @@ abstract class Base
 
 		$payload = '';
 		$length  = (int)(ord($data[1]) & 127); // Bits 1-7 in byte 1
-		if($length > 125) {
+		if ($length > 125) {
 			$temp  = $length === 126 ? fread($socket, 2) : fread($socket, 8);
-			if($temp === false) { return false; }
+			if ($temp === false) { return false; }
 			$length = '';
-			for($i = 0; $i < strlen($temp); $i++) {
+			for ($i = 0; $i < strlen($temp); $i++) {
 				$length .= sprintf("%08b", ord($temp[$i]));
 			}
 			$length = bindec($length);
 		}
 
-		if($masked) {
+		if ($masked) {
 			$mask  = fread($socket, 4);
-			if($mask === false) { return false; }
+			if ($mask === false) { return false; }
 		}
-		if($length > 0) {
+		if ($length > 0) {
 			$temp = '';
 			do {
 				$buff = fread($socket, min($length, static::$fragment_size));
-				if($buff === false) { return false; }
+				if ($buff === false) { return false; }
 				$temp .= $buff;
-			} while(strlen($temp) < $length);
-			if($masked) {
-				for($i = 0; $i < $length; $i++) {
+			} while (strlen($temp) < $length);
+			if ($masked) {
+				for ($i = 0; $i < $length; $i++) {
 					$payload .= ($temp[$i] ^ $mask[$i % 4]);
 				}
 			}
@@ -86,7 +86,7 @@ abstract class Base
 			}
 		}
 
-		if($opcode === static::$opcodes['close']) {
+		if ($opcode === static::$opcodes['close']) {
 			return false;
 		}
 		return $final ? $payload : $payload . $this->receive($socket, true);
@@ -100,11 +100,11 @@ abstract class Base
 		$head .= '000';
 		$head .= sprintf('%04b', static::$opcodes[$opcode]);
 		$head .= (bool)$masked ? '1' : '0';
-		if($length > 65535) {
+		if ($length > 65535) {
 			$head .= decbin(127);
 			$head .= sprintf('%064b', $length);
 		}
-		elseif($length > 125) {
+		elseif ($length > 125) {
 			$head .= decbin(126);
 			$head .= sprintf('%016b', $length);
 		}
@@ -113,17 +113,17 @@ abstract class Base
 		}
 
 		$frame = '';
-		foreach(str_split($head, 8) as $binstr) {
+		foreach (str_split($head, 8) as $binstr) {
 			$frame .= chr(bindec($binstr));
 		}
-		if($masked) {
+		if ($masked) {
 			$mask = '';
-			for($i = 0; $i < 4; $i++) {
+			for ($i = 0; $i < 4; $i++) {
 				$mask .= chr(rand(0, 255));
 			}
 			$frame .= $mask;
 		}
-		for($i = 0; $i < $length; $i++) {
+		for ($i = 0; $i < $length; $i++) {
 			$frame .= ($masked === true) ? $data[$i] ^ $mask[$i % 4] : $data[$i];
 		}
 		return $frame;
@@ -145,7 +145,7 @@ abstract class Base
 	protected static $fragment_size = 4096;
 
 	public function send(&$socket, $data, $encode = true, $opcode = 'text', $masked = true) {
-		if(!$encode) {
+		if (!$encode) {
 			return socket_write($socket, $data) > 0;
 		}
 		while (strlen($data)) {
@@ -157,12 +157,12 @@ abstract class Base
 		}
 	}
 	public function receive(&$socket, $decode = true) {
-		if(!$decode) {
+		if (!$decode) {
 			$data = '';
 			$buff = '';
 			do {
 				$read = @socket_recv($socket, $buff, static::$fragment_size, 0);
-				if(!$read) { return false; }
+				if (!$read) { return false; }
 				$data .= $temp;
 				usleep(1000);
 			} while ($read === static::$fragment_size);
@@ -170,7 +170,7 @@ abstract class Base
 		}
 
 		$data = null;
-		if(!socket_recv($socket, $data, 2, 0) || $data === null) { return false; }
+		if (!socket_recv($socket, $data, 2, 0) || $data === null) { return false; }
 		$final  = (bool)(ord($data[0]) & 1 << 7);
 		$rsv1   = (bool)(ord($data[0]) & 1 << 6);
 		$rsv2   = (bool)(ord($data[0]) & 1 << 5);
@@ -180,29 +180,29 @@ abstract class Base
 
 		$payload = '';
 		$length  = (int)(ord($data[1]) & 127); // Bits 1-7 in byte 1
-		if($length > 125) {
+		if ($length > 125) {
 			$temp = null;
-			if(!socket_recv($socket, $temp, $length === 126 ? 2 : 8, 0) || $temp === null) { return false; }
+			if (!socket_recv($socket, $temp, $length === 126 ? 2 : 8, 0) || $temp === null) { return false; }
 			$length = '';
-			for($i = 0; $i < strlen($temp); $i++) {
+			for ($i = 0; $i < strlen($temp); $i++) {
 				$length .= sprintf("%08b", ord($temp[$i]));
 			}
 			$length = bindec($length);
 		}
 
-		if($masked) {
+		if ($masked) {
 			$mask  = null;
-			if(!socket_recv($socket, $mask, 4, 0) || $mask === null) { return false; }
+			if (!socket_recv($socket, $mask, 4, 0) || $mask === null) { return false; }
 		}
-		if($length > 0) {
+		if ($length > 0) {
 			$temp = '';
 			do {
 				$buff = null;
-				if(!socket_recv($socket, $buff, min($length, static::$fragment_size), 0) || $buff === null) { return false; }
+				if (!socket_recv($socket, $buff, min($length, static::$fragment_size), 0) || $buff === null) { return false; }
 				$temp .= $buff;
-			} while(strlen($temp) < $length);
-			if($masked) {
-				for($i = 0; $i < $length; $i++) {
+			} while (strlen($temp) < $length);
+			if ($masked) {
+				for ($i = 0; $i < $length; $i++) {
 					$payload .= ($temp[$i] ^ $mask[$i % 4]);
 				}
 			}
@@ -211,7 +211,7 @@ abstract class Base
 			}
 		}
 
-		if($opcode === static::$opcodes['close']) {
+		if ($opcode === static::$opcodes['close']) {
 			return false;
 		}
 		return $final ? $payload : $payload . $this->receive($socket, true);
@@ -225,11 +225,11 @@ abstract class Base
 		$head .= '000';
 		$head .= sprintf('%04b', static::$opcodes[$opcode]);
 		$head .= (bool)$masked ? '1' : '0';
-		if($length > 65535) {
+		if ($length > 65535) {
 			$head .= decbin(127);
 			$head .= sprintf('%064b', $length);
 		}
-		elseif($length > 125) {
+		elseif ($length > 125) {
 			$head .= decbin(126);
 			$head .= sprintf('%016b', $length);
 		}
@@ -238,17 +238,17 @@ abstract class Base
 		}
 
 		$frame = '';
-		foreach(str_split($head, 8) as $binstr) {
+		foreach (str_split($head, 8) as $binstr) {
 			$frame .= chr(bindec($binstr));
 		}
-		if($masked) {
+		if ($masked) {
 			$mask = '';
-			for($i = 0; $i < 4; $i++) {
+			for ($i = 0; $i < 4; $i++) {
 				$mask .= chr(rand(0, 255));
 			}
 			$frame .= $mask;
 		}
-		for($i = 0; $i < $length; $i++) {
+		for ($i = 0; $i < $length; $i++) {
 			$frame .= ($masked === true) ? $data[$i] ^ $mask[$i % 4] : $data[$i];
 		}
 		return $frame;
@@ -265,24 +265,24 @@ abstract class Base
 		$payload = '';
 		$length  = (int)(ord($data[1]) & 127); // Bits 1-7 in byte 1
 		$offs    = 2;
-		if($length > 125) {
+		if ($length > 125) {
 			$temp  = $length === 126 ? substr($data, $offs, 2) : substr($data, $offs, 8);
 			$offs += $length === 126 ? 2 : 8;
 			$length = '';
-			for($i = 0; $i < strlen($temp); $i++) {
+			for ($i = 0; $i < strlen($temp); $i++) {
 				$length .= sprintf("%08b", ord($temp[$i]));
 			}
 			$length = bindec($length);
 		}
-		if($masked) {
+		if ($masked) {
 			$mask  = substr($data, $offs, 4);
 			$offs += 4;
 		}
-		if($length > 0) {
+		if ($length > 0) {
 			$temp  = substr($data, $offs, $length);
 			$offs += $length;
-			if($masked) {
-				for($i = 0; $i < $length; $i++) {
+			if ($masked) {
+				for ($i = 0; $i < $length; $i++) {
 					$payload .= ($temp[$i] ^ $mask[$i % 4]);
 				}
 			}
@@ -291,7 +291,7 @@ abstract class Base
 			}
 		}
 
-		if($opcode === static::$opcodes['close']) {
+		if ($opcode === static::$opcodes['close']) {
 			return false;
 		}
 		$data = substr($data, $offs);

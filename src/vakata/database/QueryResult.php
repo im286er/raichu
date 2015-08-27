@@ -39,7 +39,7 @@ class QueryResult
 		return $this->row !== false && $this->row !== null;
 	}
 	public function f($key) {
-		if(isset($this->row) && is_array($this->row) && isset($this->row[$key])) {
+		if (isset($this->row) && is_array($this->row) && isset($this->row[$key])) {
 			return $this->row[$key];
 		}
 		return null;
@@ -57,7 +57,7 @@ class QueryResult
 		return $this->iid ? $this->iid : $this->drv->insertId($name);
 	}
 	public function free() {
-		if(is_object($this->rsl) || is_resource($this->rsl)) {
+		if (is_object($this->rsl) || is_resource($this->rsl)) {
 			$this->drv->free($this->rsl);
 		}
 	}

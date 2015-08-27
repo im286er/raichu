@@ -12,10 +12,10 @@ class TableDefinitionArray implements TableDefinitionInterface, \JsonSerializabl
 		);
 	}
 	public function __get($key) {
-		if(isset($this->definition[$key])) {
+		if (isset($this->definition[$key])) {
 			return $this->definition[$key];
 		}
-		if(method_exists($this, 'get' . ucfirst($key))) {
+		if (method_exists($this, 'get' . ucfirst($key))) {
 			return call_user_func([$this, 'get' . ucfirst($key)]);
 		}
 		return null;

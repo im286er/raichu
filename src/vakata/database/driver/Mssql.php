@@ -9,33 +9,33 @@ class Mssql extends AbstractDriver
 	protected $transaction = false;
 
 	protected function connect() {
-		if($this->lnk === null) {
+		if ($this->lnk === null) {
 			$options = $this->settings->options;
 			$options["Database"] = $this->settings->database;
 			$options["ReturnDatesAsStrings"] = true;
-			if($this->settings->username) {
+			if ($this->settings->username) {
 				$options["UID"] = $this->settings->username;
 			}
-			if($this->settings->password) {
+			if ($this->settings->password) {
 				$options["PWD"] = $this->settings->password;
 			}
-			if($this->settings->charset) {
+			if ($this->settings->charset) {
 				//$options["CharacterSet"] = strtoupper($this->settings->charset);
 			}
 			$server = $this->settings->servername;
-			if(isset($this->settings->serverport) && $this->settings->serverport) {
+			if (isset($this->settings->serverport) && $this->settings->serverport) {
 				$server .= ', ' . $this->settings->serverport;
 			}
 
 			$this->lnk = @sqlsrv_connect($server, $options);
 
-			if($this->lnk === false) {
+			if ($this->lnk === false) {
 				throw new DatabaseException('Connect error');
 			}
 		}
 	}
 	protected function disconnect() {
-		if(is_resource($this->lnk)) {
+		if (is_resource($this->lnk)) {
 			sqlsrv_close($this->lnk);
 		}
 	}
@@ -47,16 +47,16 @@ class Mssql extends AbstractDriver
 	}
 	public function execute($sql, array $data = null) {
 		$this->connect();
-		if(!is_array($data)) {
+		if (!is_array($data)) {
 			$data = array();
 		}
 		$temp = sqlsrv_query($this->lnk, $sql, $data);
-		if(!$temp) {
+		if (!$temp) {
 			throw new DatabaseException('Could not execute query : ' . json_encode(sqlsrv_errors()) . ' <'.$sql.'>');
 		}
-		if(preg_match('@^\s*(INSERT|REPLACE)\s+INTO@i', $sql)) {
+		if (preg_match('@^\s*(INSERT|REPLACE)\s+INTO@i', $sql)) {
 			$this->iid = sqlsrv_query($this->lnk, 'SELECT SCOPE_IDENTITY()');
-			if($this->iid) {
+			if ($this->iid) {
 				$this->iid = sqlsrv_fetch_array($this->iid, SQLSRV_FETCH_NUMERIC);
 				$this->iid = $this->iid[0];
 			}

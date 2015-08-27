@@ -25,7 +25,7 @@ class Tree
 	}
 	public function root() {
 		$temp = [];
-		foreach($this->db->all("SELECT * FROM {$this->tb} WHERE {$this->fields['parent_id']} = ? ORDER BY {$this->fields['position']}", [ 0 ]) as $data) {
+		foreach ($this->db->all("SELECT * FROM {$this->tb} WHERE {$this->fields['parent_id']} = ? ORDER BY {$this->fields['position']}", [ 0 ]) as $data) {
 			$temp[] = new TreeNode($this->db, $this->tb, $data[$this->fields['id']], $this->fields, $data);
 		}
 		return $temp;
@@ -50,8 +50,8 @@ class Tree
 		// insert new node in structure
 		$sql[] = "INSERT INTO {$this->tb} (".implode(",", $this->fields).") VALUES (".implode(',', array_fill(0, count($this->fields), '?')).")";
 		$tmp = array();
-		foreach($this->fields as $k => $v) {
-			switch($k) {
+		foreach ($this->fields as $k => $v) {
+			switch ($k) {
 				case 'id':
 					$tmp[] = null;
 					break;
@@ -78,7 +78,7 @@ class Tree
 
 		$this->db->begin();
 		try {
-			foreach($sql as $k => $v) {
+			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
 			$this->db->commit();
@@ -92,18 +92,18 @@ class Tree
 		$id = $this->node((int)$id);
 		$parent = $this->node((int)$parent);
 		$position = min((int)$position, $parent->childrenCount());
-		if($id->parent_id == $parent->id && (int)$position > $id->position) {
+		if ($id->parent_id == $parent->id && (int)$position > $id->position) {
 			$position ++;
 		}
 		$position = min((int)$position, $parent->childrenCount());
 
-		if($id->left < $parent->left && $id->right > $parent->right) {
+		if ($id->left < $parent->left && $id->right > $parent->right) {
 			throw new TreeException('Could not move parent inside child');
 		}
 
 		$tmp = [];
 		$tmp[] = $id->id;
-		foreach($id->descendants() as $node) { 
+		foreach ($id->descendants() as $node) {
 			$tmp[] = (int)$node->id;
 		}
 		$width = (int)$id->right - (int)$id->left + 1;
@@ -123,7 +123,7 @@ class Tree
 		$par[] = [ $width, $ref_rgt ];
 		// move the node and children - left, right and level
 		$diff = $ref_lft - (int)$id->left;
-		if($diff > 0) { $diff = $diff - $width; }
+		if ($diff > 0) { $diff = $diff - $width; }
 		$ldiff = ((int)$parent->level + 1) - (int)$id->level;
 		$sql[] = "UPDATE {$this->tb} SET {$this->fields['right']} = {$this->fields['right']} + ?, {$this->fields['left']} = {$this->fields['left']} + ?, {$this->fields['level']} = {$this->fields['level']} + ? WHERE {$this->fields['id']} IN(".implode(',',$tmp).") ";
 		$par[] = [ $diff, $diff, $ldiff ];
@@ -142,7 +142,7 @@ class Tree
 
 		$this->db->begin();
 		try {
-			foreach($sql as $k => $v) {
+			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
 			$this->db->commit();
@@ -159,7 +159,7 @@ class Tree
 
 		$tmp = [];
 		$tmp[] = $id->id;
-		foreach($id->descendants() as $node) { 
+		foreach ($id->descendants() as $node) {
 			$tmp[] = (int)$node->id;
 		}
 		$width = (int)$id->right - (int)$id->left + 1;
@@ -180,7 +180,7 @@ class Tree
 		$par[] = [ $width, $ref_rgt ];
 		// move the element and children - left, right and level
 		$diff = $ref_lft - (int)$id->left;
-		if($diff <= 0) { $diff = $diff - $width; }
+		if ($diff <= 0) { $diff = $diff - $width; }
 		$ldiff = ((int)$parent->level + 1) - (int)$id->level;
 
 		// move the element and children - build all fields
@@ -189,14 +189,14 @@ class Tree
 		$fields[$this->fields["left"]] = $this->fields["left"]." + ? ";
 		$fields[$this->fields["right"]] = $this->fields["right"]." + ? ";
 		$fields[$this->fields["level"]] = $this->fields["level"]." + ? ";
-		$sql[] = "INSERT INTO {$this->tb} (".implode(',',array_keys($fields)).") 
-			SELECT ".implode(',',array_values($fields))." FROM {$this->tb} WHERE {$this->fields['id']} IN (".implode(",", $tmp).") 
+		$sql[] = "INSERT INTO {$this->tb} (".implode(',',array_keys($fields)).")
+			SELECT ".implode(',',array_values($fields))." FROM {$this->tb} WHERE {$this->fields['id']} IN (".implode(",", $tmp).")
 			ORDER BY {$this->fields['level']} ASC";
 		$par[] = [ $diff, $diff, $ldiff ];
 
 		$this->db->begin();
 		try {
-			foreach($sql as $k => $v) {
+			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
 			$iid = (int)$this->db->insertId();
@@ -211,13 +211,13 @@ class Tree
 				[ $ref_lft, ($ref_lft + $width - 1), $iid ]
 			);
 			$parents = array();
-			foreach($new_nodes as $node) {
-				if(!isset($parents[$node[$this->fields["left"]]])) { $parents[$node[$this->fields["left"]]] = $iid; }
-				for($i = $node[$this->fields["left"]] + 1; $i < $node[$this->fields["right"]]; $i++) {
+			foreach ($new_nodes as $node) {
+				if (!isset($parents[$node[$this->fields["left"]]])) { $parents[$node[$this->fields["left"]]] = $iid; }
+				for ($i = $node[$this->fields["left"]] + 1; $i < $node[$this->fields["right"]]; $i++) {
 					$parents[$i] = $node[$this->fields["id"]];
 				}
 			}
-			foreach($new_nodes as $k => $node) {
+			foreach ($new_nodes as $k => $node) {
 				$this->db->query(
 					"UPDATE {$this->tb} SET {$this->fields['parent_id']} = ? WHERE {$this->fields['id']} = ?",
 					[$parents[$node[$this->fields["left"]]], (int)$node[$this->fields["id"]]]
@@ -250,7 +250,7 @@ class Tree
 
 		$this->db->begin();
 		try {
-			foreach($sql as $k => $v) {
+			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
 			$this->db->commit();
@@ -261,13 +261,13 @@ class Tree
 	}
 	public function analyze() {
 		$report = array();
-		if((int)$this->db->one("SELECT COUNT(".$this->fields["id"].") AS res FROM ".$this->tb." WHERE ".$this->fields["parent_id"]." = 0") !== 1) {
+		if ((int)$this->db->one("SELECT COUNT(".$this->fields["id"].") AS res FROM ".$this->tb." WHERE ".$this->fields["parent_id"]." = 0") !== 1) {
 			$report[] = "No or more than one root node.";
 		}
-		if((int)$this->db->one("SELECT ".$this->fields["left"]." AS res FROM ".$this->tb." WHERE ".$this->fields["parent_id"]." = 0") !== 1) {
+		if ((int)$this->db->one("SELECT ".$this->fields["left"]." AS res FROM ".$this->tb." WHERE ".$this->fields["parent_id"]." = 0") !== 1) {
 			$report[] = "Root node's left index is not 1.";
 		}
-		if((int)$this->db->one("
+		if ((int)$this->db->one("
 			SELECT 
 				COUNT(".$this->fields['id'].") AS res 
 			FROM ".$this->tb." s 
@@ -277,31 +277,31 @@ class Tree
 		) {
 			$report[] = "Missing parents.";
 		}
-		if(
+		if (
 			(int)$this->db->one("SELECT MAX(".$this->fields["right"].") AS res FROM ".$this->tb) / 2 != 
 			(int)$this->db->one("SELECT COUNT(".$this->fields["id"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Right index does not match node count.";
 		}
-		if(
+		if (
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb) != 
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb) 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Duplicates in nested set.";
 		}
-		if(
+		if (
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) != 
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb) 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Left indexes not unique.";
 		}
-		if(
+		if (
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) != 
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb) 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Right indexes not unique.";
 		}
-		if(
+		if (
 			(int)$this->db->one("
 				SELECT 
 					s1.".$this->fields["id"]." AS res 
@@ -313,7 +313,7 @@ class Tree
 		) {
 			$report[] = "Nested set - matching left and right indexes.";
 		}
-		if(
+		if (
 			(int)$this->db->one("
 				SELECT 
 					".$this->fields["id"]." AS res 
@@ -321,11 +321,11 @@ class Tree
 				WHERE 
 					".$this->fields['position']." >= (
 						SELECT 
-							COUNT(".$this->fields["id"].") 
+							COUNT(".$this->fields["id"].")
 						FROM ".$this->tb." 
 						WHERE ".$this->fields['parent_id']." = s.".$this->fields['parent_id']."
 					)
-				LIMIT 1") || 
+				LIMIT 1") ||
 			(int)$this->db->one("
 				SELECT 
 					s1.".$this->fields["id"]." AS res 
@@ -338,13 +338,13 @@ class Tree
 		) {
 			$report[] = "Positions not correct.";
 		}
-		if((int)$this->db->one("
+		if ((int)$this->db->one("
 			SELECT 
 				COUNT(".$this->fields["id"].") FROM ".$this->tb." s 
 			WHERE 
 				(
 					SELECT 
-						COUNT(".$this->fields["id"].") 
+						COUNT(".$this->fields["id"].")
 					FROM ".$this->tb." 
 					WHERE 
 						".$this->fields["right"]." < s.".$this->fields["right"]." AND 
@@ -353,7 +353,7 @@ class Tree
 				) != 
 				(
 					SELECT 
-						COUNT(*) 
+						COUNT(*)
 					FROM ".$this->tb." 
 					WHERE 
 						".$this->fields["parent_id"]." = s.".$this->fields["id"]."
@@ -388,36 +388,36 @@ class Tree
 		$this->db->query("DELETE FROM temp_tree WHERE {$this->fields["parent_id"]} = 0");
 
 		while ($counter <= $maxcounter) {
-			if(!$this->db->query("" . 
-				"SELECT " . 
-					"temp_tree.".$this->fields["id"]." AS tempmin, " . 
-					"temp_tree.".$this->fields["parent_id"]." AS pid, " . 
-					"temp_tree.".$this->fields["position"]." AS lid " . 
-				"FROM temp_stack, temp_tree " . 
-				"WHERE " . 
-					"temp_stack.".$this->fields["id"]." = temp_tree.".$this->fields["parent_id"]." AND " . 
-					"temp_stack.stack_top = ".$currenttop." " . 
+			if (!$this->db->query("" .
+				"SELECT " .
+					"temp_tree.".$this->fields["id"]." AS tempmin, " .
+					"temp_tree.".$this->fields["parent_id"]." AS pid, " .
+					"temp_tree.".$this->fields["position"]." AS lid " .
+				"FROM temp_stack, temp_tree " .
+				"WHERE " .
+					"temp_stack.".$this->fields["id"]." = temp_tree.".$this->fields["parent_id"]." AND " .
+					"temp_stack.stack_top = ".$currenttop." " .
 				"ORDER BY temp_tree.".$this->fields["position"]." ASC LIMIT 1"
 			)) { return false; }
 
-			if($this->db->nextr()) {
+			if ($this->db->nextr()) {
 				$tmp = $this->db->f("tempmin");
 
 				$q = "INSERT INTO temp_stack (stack_top, ".$this->fields["id"].", ".$this->fields["left"].", ".$this->fields["right"].", ".$this->fields["level"].", ".$this->fields["parent_id"].", ".$this->fields["position"].") VALUES(".($currenttop + 1).", ".$tmp.", ".$counter.", NULL, ".$currenttop.", ".$this->db->f("pid").", ".$this->db->f("lid").")";
-				if(!$this->db->query($q)) {
+				if (!$this->db->query($q)) {
 					return false;
 				}
-				if(!$this->db->query("DELETE FROM temp_tree WHERE ".$this->fields["id"]." = ".$tmp)) {
+				if (!$this->db->query("DELETE FROM temp_tree WHERE ".$this->fields["id"]." = ".$tmp)) {
 					return false;
 				}
 				$counter++;
 				$currenttop++;
 			}
 			else {
-				if(!$this->db->query("" . 
-					"UPDATE temp_stack SET " . 
-						"".$this->fields["right"]." = ".$counter.", " . 
-						"stack_top = -stack_top " . 
+				if (!$this->db->query("" .
+					"UPDATE temp_stack SET " .
+						"".$this->fields["right"]." = ".$counter.", " .
+						"stack_top = -stack_top " .
 					"WHERE stack_top = ".$currenttop
 				)) { return false; }
 				$counter++;
@@ -431,45 +431,45 @@ class Tree
 		unset($temp_fields["left"]);
 		unset($temp_fields["right"]);
 		unset($temp_fields["level"]);
-		if(count($temp_fields) > 1) {
-			if(!$this->db->query("" . 
-				"CREATE TEMPORARY TABLE temp_tree2 " . 
+		if (count($temp_fields) > 1) {
+			if (!$this->db->query("" .
+				"CREATE TEMPORARY TABLE temp_tree2 " .
 					"SELECT ".implode(", ", $temp_fields)." FROM ".$this->tb." "
 			)) { return false; }
 		}
-		if(!$this->db->query("TRUNCATE TABLE ".$this->tb."")) { 
-			return false; 
+		if (!$this->db->query("TRUNCATE TABLE ".$this->tb."")) {
+			return false;
 		}
-		if(!$this->db->query("" . 
-			"INSERT INTO ".$this->tb." (" . 
-					"".$this->fields["id"].", " . 
-					"".$this->fields["parent_id"].", " . 
-					"".$this->fields["position"].", " . 
-					"".$this->fields["left"].", " . 
-					"".$this->fields["right"].", " . 
-					"".$this->fields["level"]." " . 
-				") " . 
-				"SELECT " . 
-					"".$this->fields["id"].", " . 
-					"".$this->fields["parent_id"].", " . 
-					"".$this->fields["position"].", " . 
-					"".$this->fields["left"].", " . 
-					"".$this->fields["right"].", " . 
-					"".$this->fields["level"]." " . 
-				"FROM temp_stack " . 
+		if (!$this->db->query("" .
+			"INSERT INTO ".$this->tb." (" .
+					"".$this->fields["id"].", " .
+					"".$this->fields["parent_id"].", " .
+					"".$this->fields["position"].", " .
+					"".$this->fields["left"].", " .
+					"".$this->fields["right"].", " .
+					"".$this->fields["level"]." " .
+				") " .
+				"SELECT " .
+					"".$this->fields["id"].", " .
+					"".$this->fields["parent_id"].", " .
+					"".$this->fields["position"].", " .
+					"".$this->fields["left"].", " .
+					"".$this->fields["right"].", " .
+					"".$this->fields["level"]." " .
+				"FROM temp_stack " .
 				"ORDER BY ".$this->fields["id"].""
-		)) { 
-			return false; 
+		)) {
+			return false;
 		}
-		if(count($temp_fields) > 1) {
-			$sql = "" . 
+		if (count($temp_fields) > 1) {
+			$sql = "" .
 				"UPDATE ".$this->tb." v, temp_tree2 SET v.".$this->fields["id"]." = v.".$this->fields["id"]." ";
-			foreach($temp_fields as $k => $v) {
-				if($k == "id") continue;
+			foreach ($temp_fields as $k => $v) {
+				if ($k == "id") continue;
 				$sql .= ", v.".$v." = temp_tree2.".$v." ";
 			}
 			$sql .= " WHERE v.".$this->fields["id"]." = temp_tree2.".$this->fields["id"]." ";
-			if(!$this->db->query($sql)) {
+			if (!$this->db->query($sql)) {
 				return false;
 			}
 		}
@@ -477,8 +477,8 @@ class Tree
 		$nodes = $this->db->get("SELECT ".$this->fields['id'].", ".$this->fields['parent_id']." FROM ".$this->tb." ORDER BY ".$this->fields['parent_id'].", ".$this->fields['position']);
 		$last_parent = false;
 		$last_position = false;
-		foreach($nodes as $node) {
-			if((int)$node[$this->fields['parent_id']] !== $last_parent) {
+		foreach ($nodes as $node) {
+			if ((int)$node[$this->fields['parent_id']] !== $last_parent) {
 				$last_position = 0;
 				$last_parent = (int)$node[$this->fields['parent_id']];
 			}

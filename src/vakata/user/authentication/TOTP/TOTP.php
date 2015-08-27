@@ -19,7 +19,7 @@ class TOTP implements AuthenticationInterface
 			'code_length'	=> 6,
 			'slice_length'	=> 30
 		], $options);
-		if(!isset($_SESSION[$this->options['session']])) {
+		if (!isset($_SESSION[$this->options['session']])) {
 			$_SESSION[$this->options['session']] = false;
 		}
 	}
@@ -29,10 +29,10 @@ class TOTP implements AuthenticationInterface
 	}
 	public function authenticate($data = null) {
 		$temp = $this->service->authenticate($data);
-		if($temp) {
+		if ($temp) {
 			$temp['totp'] = $this->getSecret($temp);
-			if(!$_SESSION[$this->options['session']]) {
-				if(!isset($data['totp'])) {
+			if (!$_SESSION[$this->options['session']]) {
+				if (!isset($data['totp'])) {
 					throw new TOTPException('Моля въведете код');
 				}
 				$this->verifyCode($temp['totp'], $data['totp']);
@@ -56,7 +56,7 @@ class TOTP implements AuthenticationInterface
 		return 'data:image/png;base64,' . @base64_encode(file_get_contents('https://chart.googleapis.com/chart?chs='.((int)$size).'x'.((int)$size).'&chld=M|0&cht=qr&chl=' . urlencode('otpauth://totp/'.$this->options['title'].'?secret='.$secret)));
 	}
 	protected function generateCode($secret, $now = null) {
-		if($now === null) {
+		if ($now === null) {
 			$now = floor(microtime(true) / $this->options['slice_length']);
 		}
 		$hash = hash_hmac('sha1', pack('N*', 0) . pack('N*', $now), $this->base32_decode($secret), true);
@@ -77,8 +77,8 @@ class TOTP implements AuthenticationInterface
 		$now = floor(microtime(true) / $this->options['slice_length']);
 		$ctm = ceil($this->options['code_timeout'] / $this->options['slice_length']);
 
-		for($i = -$ctm; $i <= $ctm; $i++) {
-			if($this->generateCode($secret, $now + $i) === $code) {
+		for ($i = -$ctm; $i <= $ctm; $i++) {
+			if ($this->generateCode($secret, $now + $i) === $code) {
 				return true;
 			}
 		}
@@ -128,7 +128,7 @@ class TOTP implements AuthenticationInterface
 			$bin .= str_pad(decbin(ord($s)), 8, 0, STR_PAD_LEFT);
 		}
 		$bin = explode(' ', trim(chunk_split($bin, 5, ' ')));
-		if(count($bin) % 8 !== 0) {
+		if (count($bin) % 8 !== 0) {
 			$bin = array_pad($bin, count($bin) + (8 - count($bin) % 8), null);
 		}
 		$b32 = '';
