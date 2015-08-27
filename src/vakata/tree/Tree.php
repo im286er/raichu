@@ -123,7 +123,9 @@ class Tree
 		$par[] = [ $width, $ref_rgt ];
 		// move the node and children - left, right and level
 		$diff = $ref_lft - (int)$id->left;
-		if ($diff > 0) { $diff = $diff - $width; }
+		if ($diff > 0) {
+			$diff = $diff - $width;
+		}
 		$ldiff = ((int)$parent->level + 1) - (int)$id->level;
 		$sql[] = "UPDATE {$this->tb} SET {$this->fields['right']} = {$this->fields['right']} + ?, {$this->fields['left']} = {$this->fields['left']} + ?, {$this->fields['level']} = {$this->fields['level']} + ? WHERE {$this->fields['id']} IN(".implode(',',$tmp).") ";
 		$par[] = [ $diff, $diff, $ldiff ];
@@ -180,7 +182,9 @@ class Tree
 		$par[] = [ $width, $ref_rgt ];
 		// move the element and children - left, right and level
 		$diff = $ref_lft - (int)$id->left;
-		if ($diff <= 0) { $diff = $diff - $width; }
+		if ($diff <= 0) {
+			$diff = $diff - $width;
+		}
 		$ldiff = ((int)$parent->level + 1) - (int)$id->level;
 
 		// move the element and children - build all fields
@@ -212,7 +216,9 @@ class Tree
 			);
 			$parents = array();
 			foreach ($new_nodes as $node) {
-				if (!isset($parents[$node[$this->fields["left"]]])) { $parents[$node[$this->fields["left"]]] = $iid; }
+				if (!isset($parents[$node[$this->fields["left"]]])) {
+					$parents[$node[$this->fields["left"]]] = $iid;
+				}
 				for ($i = $node[$this->fields["left"]] + 1; $i < $node[$this->fields["right"]]; $i++) {
 					$parents[$i] = $node[$this->fields["id"]];
 				}
@@ -465,7 +471,9 @@ class Tree
 			$sql = "" .
 				"UPDATE ".$this->tb." v, temp_tree2 SET v.".$this->fields["id"]." = v.".$this->fields["id"]." ";
 			foreach ($temp_fields as $k => $v) {
-				if ($k == "id") continue;
+				if ($k == "id") {
+					continue;
+				}
 				$sql .= ", v.".$v." = temp_tree2.".$v." ";
 			}
 			$sql .= " WHERE v.".$this->fields["id"]." = temp_tree2.".$this->fields["id"]." ";

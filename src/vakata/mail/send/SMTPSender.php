@@ -83,7 +83,9 @@ class SMTPSender implements SenderInterface
 		$data = explode("\n", $data);
 		foreach ($data as $n => $s) {
 			$s = trim(substr($s, 4));
-			if (!$s) { continue; }
+			if (!$s) {
+				continue;
+			}
 			$s = explode(' ', $s);
 			if (!empty($s)) {
 				if (!$n) {

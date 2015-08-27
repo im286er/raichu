@@ -67,7 +67,9 @@ class Epay extends AbstractPayment
 		return $this->redirect($this->options['url'], $result);
 	}
 	public function ipn(callable $c = null) {
-		while (ob_get_level()) { ob_end_clean(); }
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
 		if (isset($_POST) && is_array($_POST) && count($_POST)) {
 			@header('Content-Type: text/plain; charset=utf-8');
 			if ($_POST['checksum'] == $this->hash($_POST['encoded'])) {

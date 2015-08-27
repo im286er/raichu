@@ -72,7 +72,9 @@ class Random
 		return mb_substr($rslt, 0, $length, 'UTF-8');
 	}
 	public static function number($min = 0, $max = PHP_INT_MAX) {
-		if ($max === $min) { return $max; }
+		if ($max === $min) {
+			return $max;
+		}
 		$rand = static::generate(4);
 		$rand = hexdec(bin2hex($rand));
 		return $min + abs($rand % ($max - $min + 1));

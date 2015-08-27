@@ -162,7 +162,9 @@ abstract class Base
 			$buff = '';
 			do {
 				$read = @socket_recv($socket, $buff, static::$fragment_size, 0);
-				if (!$read) { return false; }
+				if (!$read) {
+					return false;
+				}
 				$data .= $temp;
 				usleep(1000);
 			} while ($read === static::$fragment_size);
@@ -170,7 +172,9 @@ abstract class Base
 		}
 
 		$data = null;
-		if (!socket_recv($socket, $data, 2, 0) || $data === null) { return false; }
+		if (!socket_recv($socket, $data, 2, 0) || $data === null) {
+			return false;
+		}
 		$final  = (bool)(ord($data[0]) & 1 << 7);
 		$rsv1   = (bool)(ord($data[0]) & 1 << 6);
 		$rsv2   = (bool)(ord($data[0]) & 1 << 5);
@@ -182,7 +186,9 @@ abstract class Base
 		$length  = (int)(ord($data[1]) & 127); // Bits 1-7 in byte 1
 		if ($length > 125) {
 			$temp = null;
-			if (!socket_recv($socket, $temp, $length === 126 ? 2 : 8, 0) || $temp === null) { return false; }
+			if (!socket_recv($socket, $temp, $length === 126 ? 2 : 8, 0) || $temp === null) {
+				return false;
+			}
 			$length = '';
 			for ($i = 0; $i < strlen($temp); $i++) {
 				$length .= sprintf("%08b", ord($temp[$i]));
@@ -192,13 +198,17 @@ abstract class Base
 
 		if ($masked) {
 			$mask  = null;
-			if (!socket_recv($socket, $mask, 4, 0) || $mask === null) { return false; }
+			if (!socket_recv($socket, $mask, 4, 0) || $mask === null) {
+				return false;
+			}
 		}
 		if ($length > 0) {
 			$temp = '';
 			do {
 				$buff = null;
-				if (!socket_recv($socket, $buff, min($length, static::$fragment_size), 0) || $buff === null) { return false; }
+				if (!socket_recv($socket, $buff, min($length, static::$fragment_size), 0) || $buff === null) {
+					return false;
+				}
 				$temp .= $buff;
 			} while (strlen($temp) < $length);
 			if ($masked) {

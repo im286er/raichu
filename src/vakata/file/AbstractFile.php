@@ -69,8 +69,12 @@ class AbstractFile implements FileInterface
 						if (!$height || !$width) {
 							$iw = $tmp->getImageWidth();
 							$ih = $tmp->getImageHeight();
-							if (!$width)  { $width  = $height / $ih * $iw; }
-							if (!$height) { $height = $width  / $iw * $ih; }
+							if (!$width) {
+								$width  = $height / $ih * $iw;
+							}
+							if (!$height) {
+								$height = $width  / $iw * $ih;
+							}
 						}
 						$tmp->cropThumbnailImage((int)$width, (int)$height);
 						if (!@$tmp->writeImage($cropped_name)) {
@@ -90,8 +94,12 @@ class AbstractFile implements FileInterface
 						$iw = $tm[0];
 						$ih = $tm[1];
 						if (!$height || !$width) {
-							if (!$width)  { $width  = $height / $ih * $iw; }
-							if (!$height) { $height = $width  / $iw * $ih; }
+							if (!$width) {
+								$width  = $height / $ih * $iw;
+							}
+							if (!$height) {
+								$height = $width  / $iw * $ih;
+							}
 						}
 						switch (strtolower($this->extension)) {
 							case 'jpeg':

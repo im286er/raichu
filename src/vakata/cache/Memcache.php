@@ -135,7 +135,9 @@ class Memcache implements CacheInterface
 		$value = '';
 		for ($i = 0; $i < $meta['chunks']; $i++) {
 			$tmp = $this->memcache->get($key . '_' . $i);
-			if ($tmp == false) { throw new CacheException('Missing cache chunk'); }
+			if ($tmp == false) {
+				throw new CacheException('Missing cache chunk');
+			}
 			$value .= $tmp;
 		}
 		$value = unserialize(base64_decode($value));

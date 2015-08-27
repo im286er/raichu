@@ -66,7 +66,9 @@ class Paypal extends AbstractPayment
 		}
 	}
 	public function ipn(callable $c = null) {
-		while (ob_get_level()) { ob_end_clean(); }
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
 		$url = $this->options['test'] ? 'https://www.sandbox.paypal.com/cgi-bin/webscr' : 'https://www.paypal.com/cgi-bin/webscr';
 
 		if (isset($_POST) && is_array($_POST) && count($_POST)) {

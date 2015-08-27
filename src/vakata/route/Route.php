@@ -245,7 +245,9 @@ class Route
 						$line = (int)@$e->getLine() - 1;
 						if ($file && $line) {
 							for ($i = max($line - 5, 0); $i < max($line - 5, 0) + 11; $i++) {
-								if (!isset($file[$i])) { break; }
+								if (!isset($file[$i])) {
+									break;
+								}
 								echo '<div style="padding:0 1em; line-height:2em; '. ($line === $i ? 'background:lightyellow; position:relative; color:#8b0000; font-weight:bold; box-shadow:0 0 2px rgba(0,0,0,0.7)' : 'background:'.($i%2 ? '#ebebeb' : 'white').';') . '">';
 								echo '<strong style="float:left; width:40px;">' . ($i + 1). '. </strong> ' . htmlspecialchars(trim($file[$i],"\r\n")) . "\n";
 								echo '</div>';

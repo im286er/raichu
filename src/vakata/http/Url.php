@@ -34,7 +34,9 @@ class Url implements UrlInterface
 	}
 	public function segment($i, $stripExtension = false) {
 		$i = (int)$i;
-		if ($i < 0) { $i = count($this->segs) + $i; }
+		if ($i < 0) {
+			$i = count($this->segs) + $i;
+		}
 		$seg = isset($this->segs[$i]) ? urldecode($this->segs[$i]) : null;
 		return $seg === null || !$stripExtension || !strlen($this->extn) ? $seg : preg_replace('@\.'.preg_quote($this->extn).'$@ui', '', $seg);
 	}
@@ -63,8 +65,12 @@ class Url implements UrlInterface
 			}
 			$req = array_map('urlencode',explode('/',trim($req,'/')));
 			foreach ($req as $k => $v) {
-				if ($v == '..' && $k) { unset($req[$k - 1]); }
-				elseif ($v == '.' || $v == '..') { unset($req[$k]); }
+				if ($v == '..' && $k) {
+					unset($req[$k - 1]);
+				}
+				elseif ($v == '.' || $v == '..') {
+					unset($req[$k]);
+				}
 			}
 			$req = $this->serv . '/' . implode('/', $req);
 		}

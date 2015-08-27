@@ -4,7 +4,9 @@ namespace vakata\payment;
 abstract class AbstractPayment implements PaymentInterface
 {
 	public function redirect($url, array $post = null) {
-		while (ob_get_level()) { ob_end_clean(); }
+		while (ob_get_level()) {
+			ob_end_clean();
+		}
 		if ($post) {
 			echo '<!DOCTYPE html>' . "\n";
 			echo '<html>' . "\n";

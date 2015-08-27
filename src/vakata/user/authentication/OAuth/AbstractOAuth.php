@@ -25,7 +25,9 @@ abstract class AbstractOAuth extends AbstractAuthentication
 			return null;
 		}
 		if (strpos(trim($_SERVER['REQUEST_URI'],'/'), preg_replace('(^https?://[^/]+/)i','',$this->callback_url)) === false) {
-			while (ob_get_level()) { ob_end_clean(); }
+			while (ob_get_level()) {
+				ob_end_clean();
+			}
 			header('Location: ' .
 				$this->authorize_url .
 					'client_id='    . urlencode($this->public_key) . '&' .

@@ -34,7 +34,9 @@ class Filecache implements CacheInterface
 		$partition = basename($partition);
 		if (is_dir($this->dir . DIRECTORY_SEPARATOR . $partition)) {
 			foreach (scandir($this->dir . DIRECTORY_SEPARATOR . $partition) as $file) {
-				if ($file == '.' || $file == '..') continue;
+				if ($file == '.' || $file == '..') {
+					continue;
+				}
 				if (is_file($this->dir . DIRECTORY_SEPARATOR . $partition . DIRECTORY_SEPARATOR . $file)) {
 					unlink($this->dir . DIRECTORY_SEPARATOR . $partition . DIRECTORY_SEPARATOR . $file);
 				}

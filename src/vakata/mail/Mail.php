@@ -267,7 +267,9 @@ class Mail
 
 			foreach ($this->attached as $file) {
 				$content = &$file[0]->content();
-				if (!$content) { continue; }
+				if (!$content) {
+					continue;
+				}
 				$size = strlen($content);
 				$content = chunk_split(base64_encode($content));
 				$message .= '--' . $bnd . "\r\n";
