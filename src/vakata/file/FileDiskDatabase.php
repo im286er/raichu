@@ -1,12 +1,15 @@
 <?php
 namespace vakata\file;
 
-class FileDatabase extends AbstractFile
+class FileDiskDatabase extends AbstractFile
 {
-	public function __construct($id, \vakata\database\DatabaseInterface $db, $tb = 'uploads') {
+	public function __construct($id, $directory, \vakata\database\DatabaseInterface $db, $tb = 'uploads') {
 		parent::__construct();
 		$temp = $db->one('SELECT * FROM '.$tb.' WHERE id = ?', [ (int)$id ]);
 		if (!$temp) {
+			throw new FileException('File not found', 404);
+		}
+		if(!is_file($directory . '/' . $temp['new']) || !is_readable($directory . '/' . $temp['new'])) {
 			throw new FileException('File not found', 404);
 		}
 		$this->data['id']			= $temp['id'];
@@ -16,12 +19,7 @@ class FileDatabase extends AbstractFile
 		$this->data['modified']		= (int)strtotime($temp['uploaded']);
 		$this->data['hash']			= $temp['hash'];
 		$this->data['settings']		= $temp['settings'];
-		$this->data['data']			= $temp['data'];
-		$this->data['location']		= null;
-	}
-	public function &content() {
-		if (strlen($this->data['data'])) {
-			return $this->data['data'];
-		}
+		$this->data['data']			= '';
+		$this->data['location']		= realpath($directory . DIRECTORY_SEPARATOR . $temp['new']);
 	}
 }

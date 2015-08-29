@@ -9,45 +9,70 @@ class UploadDatabase extends Upload
 	protected $dr = null;
 	protected $db = null;
 	protected $tb = null;
-	public function __construct($dir, DatabaseInterface $db, $tb = 'uploads') {
-		parent::__construct($dir);
-		$this->dr = realpath($dir);
+
+	public function __construct(DatabaseInterface $db, $tb = 'uploads') {
 		$this->db = $db;
 		$this->tb = $tb;
 	}
 	public function upload($needle, $chunk = 0) {
-		$file = parent::upload($needle, $chunk);
-		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array(str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location)));
-		try {
-			if ($id) {
+		$name = $this->getName($needle);
+
+		if ($chunk) {
+			$data = $this->db->one(
+				'SELECT id, data FROM '.$this->tb.' WHERE new LIKE ? AND uploaded > ? ORDER BY uploaded DESC',
+				[ $name . '%', date('Y-m-d H:i:s', time() - 24 * 3600) ]
+			);
+			if (!$data) {
+				throw new UploadException('Could not merge chunk', 500);
+			}
+			$data['data'] .= file_get_contents($_FILES[$needle]['tmp_name']);
+			try {
 				$this->db->query(
-					'UPDATE '.$this->tb.' SET size = ?, uploaded = ?, hash = ? WHERE id = ?',
+					'UPDATE '.$this->tb.' SET size = ?, uploaded = ?, hash = ?, data = ? WHERE id = ?',
 					array(
-						$file->size,
-						date('Y-m-d H:i:s', $file->modified),
-						$file->hash,
-						$id
+						strlen($data['data']),
+						date('Y-m-d H:i:s'),
+						md5($data['data']),
+						$data['data'],
+						$data['id']
 					)
 				);
+				$id = $data['id'];
 			}
-			else {
-				$this->db->query(
-					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash) VALUES (?,?,?,?,?,?)',
+			catch (\Exception $e) {
+				throw new UploadException('Could not store uploaded file in database', 500);
+			}
+		}
+		else {
+			$suff = 0;
+			do {
+				$full = $name . '.' . $suff;
+			} while (
+				$this->db->one(
+					'SELECT 1 FROM '.$this->tb.' WHERE new = ? AND uploaded > ?',
+					[ $full, date('Y-m-d H:i:s', time() - 24 * 3600) ]
+				) && ++$suff < 1000000
+			);
+			try {
+				$data = file_get_contents($_FILES[$needle]['tmp_name']);
+				$id = $this->db->query(
+					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
 					array(
-						$file->name,
-						str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location),
-						substr($file->name, strrpos($file->name, ".") + 1),
-						$file->size,
-						date('Y-m-d H:i:s', $file->modified),
-						$file->hash
+						implode('.', array_slice(explode('.', $name . '.' . $suff), 1, -2)),
+						$name . '.' . $suff,
+						array_slice(explode('.', $name), -2, 1)[0],
+						strlen($data),
+						date('Y-m-d H:i:s'),
+						md5($data),
+						'',
+						$data
 					)
-				);
-				$id = $this->db->insertId();
+				)->insertId();
+			}
+			catch (\Exception $e) {
+				throw new UploadException('Could not store uploaded file in database', 500);
 			}
 		}
-		catch (\Exception $e) {
-			throw new UploadException('Could not store uploaded file in database', 404);
-		}
-		return new FileDatabase($id, $this->dr, $this->db, $this->tb);
+		return new FileDatabase($id, $this->db, $this->tb);
 	}
 }
