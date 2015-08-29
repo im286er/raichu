@@ -64,7 +64,10 @@ class Mysqli extends AbstractDriver
 			if (count($data) < $sql->param_count) {
 				throw new DatabaseException('Prepared execute - not enough parameters.');
 			}
+			$lds = 1024 * 1024;
 			$ref = array('');
+			$lng = array();
+			$nul = null;
 			foreach ($data as $i => $v) {
 				switch (gettype($v)) {
 					case "boolean":
@@ -77,24 +80,29 @@ class Mysqli extends AbstractDriver
 						$ref[0] .= 'd';
 						$ref[$i+1] =& $data[$i];
 						break;
-					case "array":
-						$data[$i] = implode(',', $v);
-						$ref[0] .= 's';
-						$ref[$i+1] =& $data[$i];
-						break;
-					case "object":
-					case "resource":
-						$data[$i] = serialize($data[$i]);
-						$ref[0] .= 's';
-						$ref[$i+1] =& $data[$i];
-						break;
 					default:
-						$ref[0] .= 's';
-						$ref[$i+1] =& $data[$i];
+						if (!is_string($data[$i])) {
+							$data[$i] = serialize($data[$i]);
+						}
+						if (strlen($data[$i]) > $lds) {
+							$ref[0] .= 'b';
+							$ref[$i+1] =& $nul;
+							$lng[] = $i;
+						}
+						else {
+							$ref[0] .= 's';
+							$ref[$i+1] =& $data[$i];
+						}
 						break;
 				}
 			}
 			call_user_func_array(array($sql, 'bind_param'), $ref);
+			foreach ($lng as $index) {
+				$data[$index] = str_split($data[$index], $lds);
+				foreach ($data[$index] as $chunk) {
+					$sql->send_long_data($index, $chunk);
+				}
+			}
 		}
 		$rtrn = $sql->execute();
 		if (!$this->mnd) {
