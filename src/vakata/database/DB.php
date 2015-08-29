@@ -36,7 +36,7 @@ class DB implements DatabaseInterface
 		$this->drv = $drv;
 	}
 	/**
-	 * Създаване на параметризирана заявка 
+	 * Създаване на параметризирана заявка
 	 * Да се използва само ако е необходимо една и съща заявка да се изпълни много пъти с различни параметри.
 	 * @method prepare
 	 * @param  String  $sql Заявката за подготовка, за placeholder на стойности се използва ?
@@ -141,23 +141,26 @@ class DB implements DatabaseInterface
 	 * @return boolean Индикатор дали началото на транзакция е успешно
 	 */
 	public function begin() {
-		$this->drv->begin();
+		if($this->drv->isTransaction()) {
+			return false;
+		}
+		return $this->drv->begin();
 	}
 	/**
 	 * Финализиране на транзакция
 	 * @method commit
 	 * @return boolean Индикатор дали финализирането е успешно
 	 */
-	public function commit() {
-		$this->drv->commit();
+	public function commit($isTransaction = true) {
+		return $isTransaction && $this->drv->isTransaction() && $this->drv->commit();
 	}
 	/**
 	 * Връщане на транзакция до предишен стейт
 	 * @method rollback
 	 * @return boolean   Индикатор дали връщането е успешно
 	 */
-	public function rollback() {
-		$this->drv->rollback();
+	public function rollback($isTransaction = true) {
+		return $isTransaction && $this->drv->isTransaction() && $this->drv->rollback();
 	}
 	/**
 	 * Връщане на транзакция до предишен стейт

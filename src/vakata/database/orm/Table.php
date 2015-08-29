@@ -292,7 +292,7 @@ class Table implements TableInterface
 			}
 		}
 		$sql = 'SELECT ' . implode(', ', $fields). ' FROM ' . $this->table . ' AS t ';
-		
+
 		foreach ($this->joined as $k => $v) {
 			if ($this->relations[$k]['pivot']) {
 				$sql .= 'LEFT JOIN ' . $this->relations[$k]['pivot'] . ' AS '.$k.'_pivot ON ';
@@ -411,7 +411,7 @@ class Table implements TableInterface
 		else {
 			throw new ORMException('Invalid column: ' . implode('.', $column));
 		}
-		
+
 		if (!is_array($value)) {
 			return $this->where($column . ' = ?', [$value]);
 		}
@@ -585,10 +585,7 @@ class Table implements TableInterface
 		return $this->new[] = $temp;
 	}
 	public function save(array $data = [], $delete = true) {
-		$wasInTransaction = $this->database->isTransaction();
-		if (!$wasInTransaction) {
-			$this->database->begin();
-		}
+		$trans = $this->database->begin();
 		try {
 			$ret = [];
 			$ids = null;
@@ -610,33 +607,22 @@ class Table implements TableInterface
 				$ids = $delete ? $temp->delete() : $temp->getID();
 				unset($ret[md5(serialize($ids))]);
 			}
-			if (!$wasInTransaction) {
-				$this->database->commit();
-			}
+			$this->database->commit($trans);
 			return $ret;
 		} catch (DatabaseException $e) {
-			if (!$wasInTransaction) {
-				$this->database->rollback();
-			}
+			$this->database->rollback($trans);
 			throw $e;
 		}
 	}
 	public function delete() {
-		$wasInTransaction = $this->database->isTransaction();
-		if (!$wasInTransaction) {
-			$this->database->begin();
-		}
+		$trans = $this->database->begin();
 		try {
 			foreach ($this as $temp) {
 				$temp->delete();
 			}
-			if (!$wasInTransaction) {
-				$this->database->commit();
-			}
+			$this->database->commit($trans);
 		} catch (DatabaseException $e) {
-			if (!$wasInTransaction) {
-				$this->database->rollback();
-			}
+			$this->database->rollback($trans);
 			throw $e;
 		}
 	}

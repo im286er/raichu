@@ -76,15 +76,15 @@ class Tree
 		}
 		$par[] = $tmp;
 
-		$this->db->begin();
+		$trans = $this->db->begin();
 		try {
 			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
-			$this->db->commit();
+			$this->db->commit($trans);
 			return (int)$this->db->insertId();
 		} catch(\Exception $e) {
-			$this->db->rollback();
+			$this->db->rollback($trans);
 			throw new TreeException('Could not create');
 		}
 	}
@@ -142,14 +142,14 @@ class Tree
 		$sql[] = "UPDATE {$this->tb} SET {$this->fields['right']} = {$this->fields['right']} - ? WHERE {$this->fields['right']} > ? AND {$this->fields['id']} NOT IN(".implode(',',$tmp).")";
 		$par[] = [ $width, $id->right ];
 
-		$this->db->begin();
+		$trans = $this->db->begin();
 		try {
 			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
-			$this->db->commit();
+			$this->db->commit($trans);
 		} catch(\Exception $e) {
-			$this->db->rollback();
+			$this->db->rollback($trans);
 			throw new TreeException('Could not move');
 		}
 	}
@@ -198,7 +198,7 @@ class Tree
 			ORDER BY {$this->fields['level']} ASC";
 		$par[] = [ $diff, $diff, $ldiff ];
 
-		$this->db->begin();
+		$trans = $this->db->begin();
 		try {
 			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
@@ -229,10 +229,10 @@ class Tree
 					[$parents[$node[$this->fields["left"]]], (int)$node[$this->fields["id"]]]
 				);
 			}
-			$this->db->commit();
+			$this->db->commit($trans);
 			return $iid;
 		} catch(\Exception $e) {
-			$this->db->rollback();
+			$this->db->rollback($trans);
 			throw new TreeException('Could not copy');
 		}
 	}
@@ -254,14 +254,14 @@ class Tree
 		$sql[] = "UPDATE {$this->tb} SET {$this->fields['position']} = {$this->fields['position']} - 1 WHERE {$this->fields['parent_id']} = ? AND {$this->fields['position']} > ?";
 		$par[] = [ $id->parent_id, $id->position ];
 
-		$this->db->begin();
+		$trans = $this->db->begin();
 		try {
 			foreach ($sql as $k => $v) {
 				$this->db->query($v, $par[$k]);
 			}
-			$this->db->commit();
+			$this->db->commit($trans);
 		} catch(\Exception $e) {
-			$this->db->rollback();
+			$this->db->rollback($trans);
 			throw new TreeException('Could not remove');
 		}
 	}
@@ -274,94 +274,94 @@ class Tree
 			$report[] = "Root node's left index is not 1.";
 		}
 		if ((int)$this->db->one("
-			SELECT 
-				COUNT(".$this->fields['id'].") AS res 
-			FROM ".$this->tb." s 
-			WHERE 
-				".$this->fields["parent_id"]." != 0 AND 
+			SELECT
+				COUNT(".$this->fields['id'].") AS res
+			FROM ".$this->tb." s
+			WHERE
+				".$this->fields["parent_id"]." != 0 AND
 				(SELECT COUNT(".$this->fields['id'].") FROM ".$this->tb." WHERE ".$this->fields["id"]." = s.".$this->fields["parent_id"].") = 0") > 0
 		) {
 			$report[] = "Missing parents.";
 		}
 		if (
-			(int)$this->db->one("SELECT MAX(".$this->fields["right"].") AS res FROM ".$this->tb) / 2 != 
+			(int)$this->db->one("SELECT MAX(".$this->fields["right"].") AS res FROM ".$this->tb) / 2 !=
 			(int)$this->db->one("SELECT COUNT(".$this->fields["id"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Right index does not match node count.";
 		}
 		if (
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb) != 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb) !=
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Duplicates in nested set.";
 		}
 		if (
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) != 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) !=
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["left"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Left indexes not unique.";
 		}
 		if (
-			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) != 
+			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["id"].") AS res FROM ".$this->tb) !=
 			(int)$this->db->one("SELECT COUNT(DISTINCT ".$this->fields["right"].") AS res FROM ".$this->tb)
 		) {
 			$report[] = "Right indexes not unique.";
 		}
 		if (
 			(int)$this->db->one("
-				SELECT 
-					s1.".$this->fields["id"]." AS res 
-				FROM ".$this->tb." s1, ".$this->tb." s2 
-				WHERE 
-					s1.".$this->fields['id']." != s2.".$this->fields['id']." AND 
-					s1.".$this->fields['left']." = s2.".$this->fields['right']." 
+				SELECT
+					s1.".$this->fields["id"]." AS res
+				FROM ".$this->tb." s1, ".$this->tb." s2
+				WHERE
+					s1.".$this->fields['id']." != s2.".$this->fields['id']." AND
+					s1.".$this->fields['left']." = s2.".$this->fields['right']."
 				LIMIT 1")
 		) {
 			$report[] = "Nested set - matching left and right indexes.";
 		}
 		if (
 			(int)$this->db->one("
-				SELECT 
-					".$this->fields["id"]." AS res 
-				FROM ".$this->tb." s 
-				WHERE 
+				SELECT
+					".$this->fields["id"]." AS res
+				FROM ".$this->tb." s
+				WHERE
 					".$this->fields['position']." >= (
-						SELECT 
+						SELECT
 							COUNT(".$this->fields["id"].")
-						FROM ".$this->tb." 
+						FROM ".$this->tb."
 						WHERE ".$this->fields['parent_id']." = s.".$this->fields['parent_id']."
 					)
 				LIMIT 1") ||
 			(int)$this->db->one("
-				SELECT 
-					s1.".$this->fields["id"]." AS res 
-				FROM ".$this->tb." s1, ".$this->tb." s2 
-				WHERE 
-					s1.".$this->fields['id']." != s2.".$this->fields['id']." AND 
-					s1.".$this->fields['parent_id']." = s2.".$this->fields['parent_id']." AND 
-					s1.".$this->fields['position']." = s2.".$this->fields['position']." 
+				SELECT
+					s1.".$this->fields["id"]." AS res
+				FROM ".$this->tb." s1, ".$this->tb." s2
+				WHERE
+					s1.".$this->fields['id']." != s2.".$this->fields['id']." AND
+					s1.".$this->fields['parent_id']." = s2.".$this->fields['parent_id']." AND
+					s1.".$this->fields['position']." = s2.".$this->fields['position']."
 				LIMIT 1")
 		) {
 			$report[] = "Positions not correct.";
 		}
 		if ((int)$this->db->one("
-			SELECT 
-				COUNT(".$this->fields["id"].") FROM ".$this->tb." s 
-			WHERE 
+			SELECT
+				COUNT(".$this->fields["id"].") FROM ".$this->tb." s
+			WHERE
 				(
-					SELECT 
+					SELECT
 						COUNT(".$this->fields["id"].")
-					FROM ".$this->tb." 
-					WHERE 
-						".$this->fields["right"]." < s.".$this->fields["right"]." AND 
-						".$this->fields["left"]." > s.".$this->fields["left"]." AND 
+					FROM ".$this->tb."
+					WHERE
+						".$this->fields["right"]." < s.".$this->fields["right"]." AND
+						".$this->fields["left"]." > s.".$this->fields["left"]." AND
 						".$this->fields["level"]." = s.".$this->fields["level"]." + 1
-				) != 
+				) !=
 				(
-					SELECT 
+					SELECT
 						COUNT(*)
-					FROM ".$this->tb." 
-					WHERE 
+					FROM ".$this->tb."
+					WHERE
 						".$this->fields["parent_id"]." = s.".$this->fields["id"]."
 				)")
 		) {

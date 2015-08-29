@@ -11,8 +11,8 @@ interface DatabaseInterface
 	public function execute($data = null);
 	public function escape($data);
 	public function begin();
-	public function commit();
-	public function rollback();
+	public function commit($isTransaction = true);
+	public function rollback($isTransaction = true);
 	public function isTransaction();
 	public function driver();
 }

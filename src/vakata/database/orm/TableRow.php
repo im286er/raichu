@@ -145,10 +145,7 @@ class TableRow implements TableRowInterface
 
 	// modifiers
 	public function save() {
-		$wasInTransaction = $this->database->isTransaction();
-		if (!$wasInTransaction) {
-			$this->database->begin();
-		}
+		$trans = $this->database->begin();
 		try {
 			$fk = $this->getID();
 
@@ -248,7 +245,7 @@ class TableRow implements TableRowInterface
 							$par[] = isset($fk[$local]) ? $fk[$local] : $this->{$local};
 						}
 						$que[] = ['DELETE FROM '.$v['pivot'].' WHERE ' . implode(' AND ', $sql), $par];
-						
+
 						foreach ($this->{$k}()->save([], false) as $item) {
 							$sql = [];
 							$par = [];
@@ -277,22 +274,15 @@ class TableRow implements TableRowInterface
 				}
 			}
 
-			if (!$wasInTransaction) {
-				$this->database->commit();
-			}
+			$this->database->commit($trans);
 			return $fk;
 		} catch (DatabaseException $e) {
-			if (!$wasInTransaction) {
-				$this->database->rollback();
-			}
+			$this->database->rollback($trans);
 			throw $e;
 		}
 	}
 	public function delete() {
-		$wasInTransaction = $this->database->isTransaction();
-		if (!$wasInTransaction) {
-			$this->database->begin();
-		}
+		$trans = $this->database->begin();
 		try {
 			$fk = $this->getID();
 
@@ -321,14 +311,10 @@ class TableRow implements TableRowInterface
 				}
 				$this->database->query('DELETE FROM ' . $this->definition->getName() . ' WHERE '. implode(' AND ', $sql), $fk);
 			}
-			if (!$wasInTransaction) {
-				$this->database->commit();
-			}
+			$this->database->commit($trans);
 			return $fk;
 		} catch (DatabaseException $e) {
-			if (!$wasInTransaction) {
-				$this->database->rollback();
-			}
+			$this->database->rollback($trans);
 			throw $e;
 		}
 	}
