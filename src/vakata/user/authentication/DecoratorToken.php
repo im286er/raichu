@@ -3,33 +3,50 @@ namespace vakata\user\authentication;
 
 class DecoratorToken implements AuthenticationInterface
 {
-	protected $key  = null;
 	protected $auth = null;
 	protected $prov = null;
+	protected $settings = null;
 
-	public function __construct(AuthenticationInterface $auth, $key) {
-		$this->key = $key;
+	public function __construct(AuthenticationInterface $auth, array $settings) {
+		$this->settings = array_merge([
+			'key'      => 'tokenkey',
+			'cookie'   => false,
+			'validity' => 3600 * 24 * 30
+		], $settings);
+		$this->key = $this->settings['key'];
 		$this->auth = $auth;
 	}
 	public function provider() {
 		return isset($this->prov) ? $this->prov : $this->auth->provider();
 	}
 	public function authenticate($data = null) {
+		if (!isset($data['token']) && $this->settings['cookie'] && isset($_COOKIE) && isset($_COOKIE[$this->settings['cookie']])) {
+			$data['token'] = $_COOKIE[$this->settings['cookie']];
+		}
 		if (isset($data['token'])) {
 			$temp = $this->verifyToken($data['token']);
 			if ($temp) {
-				$temp['token'] = $this->generateToken($temp);
+				$temp['token'] = $this->generateToken($temp, 0, $this->settings['validity']);
+				if ($this->settings['cookie']) {
+					setcookie($this->settings['cookie'], $temp['token'], time() + $this->settings['validity'], '/', null, false, true);
+				}
 				return $temp;
 			}
 		}
 		$temp = $this->auth->authenticate($data);
 		if ($temp) {
 			$temp['provider'] = $this->auth->provider();
-			$temp['token'] = $this->generateToken($temp);
+			$temp['token'] = $this->generateToken($temp, 0, $this->settings['validity']);
+			if ($this->settings['cookie']) {
+				setcookie($this->settings['cookie'], $temp['token'], time() + $this->settings['validity'], '/', null, false, true);
+			}
 		}
 		return $temp;
 	}
 	public function clear() {
+		if ($this->settings['cookie']) {
+			setcookie($this->settings['cookie'], "", time() - $this->settings['validity'], '/', null, false, true);
+		}
 		return $this->auth->clear();
 	}
 	public function restore($data = null) {
@@ -113,7 +130,7 @@ class DecoratorToken implements AuthenticationInterface
 
 		$head = str_replace('=', '', strtr(base64_encode(json_encode($head)), '+/', '-_'));
 		$body = str_replace('=', '', strtr(base64_encode(json_encode($body)), '+/', '-_'));
-		
+
 		$sign = hash_hmac('SHA256', $head . '.' . $body, $key, true);
 		$sign = str_replace('=', '', strtr(base64_encode($sign), '+/', '-_'));
 		return $head . '.' . $body . '.' . $sign;

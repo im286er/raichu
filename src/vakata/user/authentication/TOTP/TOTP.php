@@ -50,7 +50,7 @@ class TOTP implements AuthenticationInterface
 	}
 
 	protected function getSecret($user) {
-		return substr($this->base32_encode(sha1($this->options['secret'] . '.' . $this->provider() . '.' . $user['id'])), 0, 16);
+		return substr($this->base32_encode(sha1($this->options['secret'] . '.' . $user['id'])), 0, 16);
 	}
 	protected function getQRCode($secret, $size = 200) {
 		return 'data:image/png;base64,' . @base64_encode(file_get_contents('https://chart.googleapis.com/chart?chs='.((int)$size).'x'.((int)$size).'&chld=M|0&cht=qr&chl=' . urlencode('otpauth://totp/'.$this->options['title'].'?secret='.$secret)));
