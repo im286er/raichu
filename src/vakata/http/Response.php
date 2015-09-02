@@ -163,7 +163,7 @@ class Response implements ResponseInterface
 		}
 	}
 
-	public function file(\vakata\file\FileInterface $file, $file_name = null, $chunks = false) {
+	public function file(\vakata\file\FileInterface $file, $file_name = null, $chunks = false, $head_only = false) {
 		$extension = $file_name ? substr($file_name, strrpos($file_name, ".") + 1) : $file->extension;
 		$file_name = $file_name ? : $file->name;
 		$location = $file->location;
@@ -249,7 +249,7 @@ class Response implements ResponseInterface
 			}
 		}
 
-		if (!$cached) {
+		if (!$cached && !$head_only) {
 			if ($location && strpos($location, 'http') !== 0 && ($fp = @fopen($location, 'rb'))) {
 				set_time_limit(0);
 				ob_implicit_flush(true);

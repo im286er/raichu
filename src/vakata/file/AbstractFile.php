@@ -54,7 +54,7 @@ class AbstractFile implements FileInterface
 		return $temp;
 	}
 
-	public function serve(\vakata\http\ResponseInterface $res, $file_name = null, $width = null, $height = null, $chunks = false) {
+	public function serve(\vakata\http\ResponseInterface $res, $file_name = null, $width = null, $height = null, $chunks = false, $head_only = false) {
 		$extension = $file_name ? substr($file_name, strrpos($file_name, ".") + 1) : $this->extension;
 		$file_name = $file_name ? : $this->name;
 
@@ -159,7 +159,7 @@ class AbstractFile implements FileInterface
 				return $res;
 			}
 		}
-		$res->file($this, $file_name);
+		$res->file($this, $file_name, $chunks, $head_only);
 		return $res;
 	}
 }
