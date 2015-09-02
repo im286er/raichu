@@ -7,6 +7,7 @@ class Random
 		$size = 64;
 		$seeds = [];
 		// high
+		/* way too risky to use - reads are blocked when not enough entropy is available
 		$file = '/dev/random';
 		if (@file_exists($file) && ($file = @fopen($file, 'rb'))) {
 			if (function_exists('stream_set_read_buffer')) {
@@ -15,6 +16,7 @@ class Random
 			$seeds[] = fread($file, $size);
 			fclose($file);
 		}
+		*/
 		// high
 		if (function_exists('openssl_random_pseudo_bytes')) {
 			$seeds[] = openssl_random_pseudo_bytes($size);
