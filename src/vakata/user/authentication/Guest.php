@@ -1,12 +1,13 @@
 <?php
 namespace vakata\user\authentication;
 
-class Dummy extends AbstractAuthentication
+class Guest extends AbstractAuthentication
 {
 	public function authenticate($data = null) {
 		return [
-			'id'   => 'guest',
-			'name' => 'guest'
+			'id'    => 'guest',
+			'name'  => 'Guest',
+			'guest' => true
 		];
 	}
 }
