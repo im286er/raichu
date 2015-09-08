@@ -22,7 +22,7 @@ class Certificate extends AbstractAuthentication
 				'mail'        => isset($_SERVER['SSL_CLIENT_S_DN_Email']) ? $_SERVER['SSL_CLIENT_S_DN_Email'] : ''
 			];
 			return (isset($this->filter) && is_callable($this->filter)) ?
-				$this->filter($data) :
+				call_user_func($this->filter, $data) :
 				$data;
 		}
 	}
