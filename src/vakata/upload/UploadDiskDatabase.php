@@ -16,8 +16,8 @@ class UploadDiskDatabase extends UploadDisk
 		$this->db = $db;
 		$this->tb = $tb;
 	}
-	public function upload($needle, $chunk = 0) {
-		$file = parent::upload($needle, $chunk);
+	public function upload($needle, $chunk = 0, $chunks = 0) {
+		$file = parent::upload($needle, $chunk, $chunks);
 		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array(str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location)));
 		try {
 			if ($id) {

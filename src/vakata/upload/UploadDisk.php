@@ -22,7 +22,7 @@ class UploadDisk extends Upload implements UploadInterface
 		}
 	}
 
-	public function upload($needle, $chunk = 0) {
+	public function upload($needle, $chunk = 0, $chunks = 0) {
 		$this->check($needle);
 
 		$prefix = date('Y/m/d');

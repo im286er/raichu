@@ -5,7 +5,7 @@ use vakata\file\FileUpload;
 
 abstract class Upload implements UploadInterface
 {
-	abstract public function upload($needle, $chunk = 0);
+	abstract public function upload($needle, $chunk = 0, $chunks = 0);
 
 	protected function check($needle) {
 		if (!isset($_FILES) || !is_array($_FILES) || !isset($_FILES[$needle])) {

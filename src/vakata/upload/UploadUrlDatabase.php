@@ -15,8 +15,8 @@ class UploadUrlDatabase extends UploadUrl
 		$this->db = $db;
 		$this->tb = $tb;
 	}
-	public function upload($needle, $chunk = 0) {
-		$file = parent::upload($needle, $chunk);
+	public function upload($needle, $chunk = 0, $chunks = 0) {
+		$file = parent::upload($needle, $chunk, $chunks);
 		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array($file->location));
 		try {
 			if ($id) {

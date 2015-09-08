@@ -14,10 +14,10 @@ class UploadDatabase extends Upload
 		$this->db = $db;
 		$this->tb = $tb;
 	}
-	public function upload($needle, $chunk = 0) {
+	public function upload($needle, $chunk = 0, $chunks = 0) {
 		$name = $this->getName($needle);
 
-		if ($chunk) {
+		if ($chunks > 0 && $chunk > 0) {
 			$data = $this->db->one(
 				'SELECT id, data FROM '.$this->tb.' WHERE new LIKE ? AND uploaded > ? ORDER BY uploaded DESC',
 				[ $name . '%', date('Y-m-d H:i:s', time() - 24 * 3600) ]
