@@ -418,7 +418,7 @@ class Table implements TableInterface
 		if (isset($value['beg']) && isset($value['end'])) {
 			return $this->where($column . ' BETWEEN ? AND ?', [ $value['beg'], $value['end'] ]);
 		}
-		if (count($settings[$column])) {
+		if (count($value)) {
 			return $this->where($column . ' IN ('.implode(',', array_fill(0, count($value), '?')).')', $value);
 		}
 		return $this;
