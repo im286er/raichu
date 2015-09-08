@@ -38,7 +38,16 @@ class DecoratorDatabase implements AuthenticationInterface
 			$data = $this->getByProviderId($this->auth->provider(), $temp['id']);
 			if (!$data && $this->register) {
 				// name, mail - normalize from data and insert
-				$user_id = $this->db->query('INSERT INTO '.$this->tb.' (name, mail, last_seen, last_login, created, match_session) VALUES (?,?,?,?,?,?)', [ isset($temp['name']) ? $temp['name'] : $temp['id'], isset($temp['mail']) ? $temp['mail'] : '', date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), date('Y-m-d H:i:s'), 1 ])->insertId();
+				$user_id = $this->db->query(
+					'INSERT INTO '.$this->tb.' (name, mail, last_seen, last_login, created, match_session) VALUES (?,?,?,?,?,?)',
+					[
+						isset($temp['name']) ? $temp['name'] : $temp['id'],
+						isset($temp['mail']) ? $temp['mail'] : '',
+						date('Y-m-d H:i:s'),
+						date('Y-m-d H:i:s'),
+						date('Y-m-d H:i:s'),
+						1
+					])->insertId();
 				$this->db->query(
 					'INSERT INTO ' . $this->tb . '_authentication (provider, provider_id, user_id) VALUES(?,?,?)',
 					[ $this->auth->provider(), $temp['id'], $user_id ]
