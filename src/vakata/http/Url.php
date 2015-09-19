@@ -25,7 +25,7 @@ class Url implements UrlInterface
 		$this->domn	= trim(preg_replace('@^www\.@', '', htmlentities($_SERVER['SERVER_NAME'])),'/');
 		$this->extn = preg_match('(\.([a-z0-9]{2,4})$)i', $_SERVER['REQUEST_URI'], $temp) ? $temp[1] : '';
 	}
-	
+
 	public function current($withQuery = true) {
 		return $this->serv.$this->webr.$this->reqt.( $withQuery && isset($_SERVER['QUERY_STRING']) && strlen($_SERVER['QUERY_STRING']) ? '?'.$_SERVER['QUERY_STRING'] : '' );
 	}
@@ -78,6 +78,16 @@ class Url implements UrlInterface
 			$params = http_build_query($params);
 			$req = $req . '?' . $params;
 		}
+		return $req;
+	}
+	public function rel($req = '', array $params = null) {
+		$cur = $this->current(false);
+		$bas = trim($this->base(),'/');
+		$cur = trim(str_replace($bas, '', $cur), '/');
+		$cur = count(explode('/', $cur)) - 1;
+		$req = $this->get($req, $params);
+		$req = str_replace($bas, './' . str_repeat('/../', $cur), $req);
+		$req = str_replace('//', '/', $req);
 		return $req;
 	}
 }

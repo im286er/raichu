@@ -1,7 +1,7 @@
 <?php
 namespace vakata\database;
 
-class Result implements ResultInterface, \JsonSerializable 
+class Result implements ResultInterface, \JsonSerializable
 {
 	protected $all  = null;
 	protected $rdy  = false;
@@ -34,6 +34,9 @@ class Result implements ResultInterface, \JsonSerializable
 			return current($this->all);
 		}
 		$tmp = $this->rslt->row();
+		if ($tmp === false) {
+			return null;
+		}
 		$row = [];
 
 		switch ($this->mode) {

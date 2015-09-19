@@ -13,7 +13,7 @@ class Oracle extends AbstractDriver
 					@oci_pconnect($this->settings->username, $this->settings->password, $this->settings->servername, $this->settings->charset) :
 					@oci_connect($this->settings->username, $this->settings->password, $this->settings->servername, $this->settings->charset);
 			if ($this->lnk === false) {
-				throw new DatabaseException('Connect error : ' . oci_error());
+				throw new DatabaseException('Connect error');
 			}
 			if ($this->settings->timezone) {
 				$this->real_query("ALTER session SET time_zone = '" . addslashes($this->settings->timezone) . "'");
@@ -61,7 +61,7 @@ class Oracle extends AbstractDriver
 				case "boolean":
 				case "integer":
 					$data[$i] = (int)$v;
-					oci_bind_by_name($sql, 'f'.$i, $data[$i], SQLT_INT);
+					oci_bind_by_name($sql, 'f'.$i, $data[$i], -1, SQLT_INT);
 					break;
 				case "array":
 					$data[$i] = implode(',', $v);

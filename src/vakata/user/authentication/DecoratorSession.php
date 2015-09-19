@@ -59,13 +59,16 @@ class DecoratorSession implements AuthenticationInterface
 			$_SESSION[$this->settings['key']]['lastlogin']      = time();
 			$_SESSION[$this->settings['key']]['lastregenerate'] = time();
 			$_SESSION[$this->settings['key']]['provider']       = $this->auth->provider();
-			$temp['ip']      = $_SESSION[$this->settings['key']]['ip'];
-			$temp['ua']      = $_SESSION[$this->settings['key']]['ua'];
-			$temp['login']   = $_SESSION[$this->settings['key']]['lastlogin'];
-			$temp['seen']    = $_SESSION[$this->settings['key']]['lastseen'];
+			$_SESSION[$this->settings['key']]['newsession']     = !isset($_SESSION[$this->settings['key']]['newsession']);
+			$temp['ip']         = $_SESSION[$this->settings['key']]['ip'];
+			$temp['ua']         = $_SESSION[$this->settings['key']]['ua'];
+			$temp['login']      = $_SESSION[$this->settings['key']]['lastlogin'];
+			$temp['seen']       = $_SESSION[$this->settings['key']]['lastseen'];
+			$temp['newsession'] = $_SESSION[$this->settings['key']]['newsession'];
 			return $_SESSION[$this->settings['key']]['data'] = $temp;
 		}
 		if (isset($_SESSION[$this->settings['key']]['data'])) {
+			$_SESSION[$this->settings['key']]['newsession'] = $_SESSION[$this->settings['key']]['data']['newsession'] = false;
 			if ($this->settings['match_ip'] && $this->ipAddress() !== $_SESSION[$this->settings['key']]['ip']) {
 				throw new UserException('Достъпвате системата от различно IP.');
 			}
@@ -94,9 +97,10 @@ class DecoratorSession implements AuthenticationInterface
 	}
 	public function clear() {
 		$this->auth->clear();
-		$_SESSION[$this->settings['key']]['lastlogin'] = 0;
-		$_SESSION[$this->settings['key']]['data']      = null;
-		$_SESSION[$this->settings['key']]['provider']  = null;
+		$_SESSION[$this->settings['key']]['lastlogin']  = 0;
+		$_SESSION[$this->settings['key']]['data']       = null;
+		$_SESSION[$this->settings['key']]['provider']   = null;
+		unset($_SESSION[$this->settings['key']]['newsession']);
 	}
 
 	/*

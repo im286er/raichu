@@ -14,6 +14,10 @@ class View
 		$this->data = $data;
 	}
 
+	public function clear() {
+		$this->data = [];
+		return $this;
+	}
 	public function add($name, $value = null) {
 		if (is_array($name) && $value === null) {
 			$this->data = array_merge($this->data, $name);
@@ -44,6 +48,9 @@ class View
 	public static function get($file, array $data = []) {
 		return (new self($file, $data))->render();
 	}
+	public static function build($file, array $data = []) {
+		return (new self($file, $data));
+	}
 	public static function share($var, $value = null) {
 		if (is_array($var) && $value === null) {
 			static::$vars = array_merge(static::$vars, $var);
@@ -68,7 +75,7 @@ class View
 			return false;
 		}
 	}
-	
+
 	protected static function normalize($view) {
 		if (!preg_match('(\.php$)i',$view)) {
 			$view .= '.php';
