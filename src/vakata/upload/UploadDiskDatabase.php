@@ -35,7 +35,7 @@ class UploadDiskDatabase extends UploadDisk
 				$this->db->query(
 					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
 					array(
-						$file->name,
+						$this->getName($needle, false),
 						str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location),
 						substr($file->name, strrpos($file->name, ".") + 1),
 						$file->size,

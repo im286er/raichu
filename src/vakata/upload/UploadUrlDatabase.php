@@ -34,7 +34,7 @@ class UploadUrlDatabase extends UploadUrl
 				$this->db->query(
 					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
 					array(
-						$file->name,
+						$this->getName($needle, false),
 						$file->location,
 						substr($file->name, strrpos($file->name, ".") + 1),
 						$file->size,

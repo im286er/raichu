@@ -22,6 +22,31 @@ class UploadDisk extends Upload implements UploadInterface
 		}
 	}
 
+	protected function getName($needle, $fixed = true) {
+		$name = $_FILES[$needle]['name'] === 'blob' && isset($_POST["name"]) ?
+			$_POST["name"] :
+			$_FILES[$needle]['name'];
+		$name = basename($name);
+
+		if ($fixed) {
+			$prefix = md5(session_id() . '/' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''));
+			$dotp = strrpos($name, ".");
+			if ($dotp === false) {
+				$extn = '';
+				$temp = $name;
+			}
+			else {
+				$extn = substr($name, $dotp);
+				$temp = substr($name, 0, $dotp);
+			}
+			$cntr = mb_strlen($temp);
+			do {
+				$name = substr($prefix, 0, 10) . '.' . urlencode(mb_substr($temp, 0, $cntr--)) . urlencode($extn) . '.up';
+			} while (strlen($name) >= 200); // can not use 255 - allow 8 symbols for counter
+		}
+		return $name;
+	}
+
 	public function upload($needle, $chunk = 0, $chunks = 0) {
 		$this->check($needle);
 

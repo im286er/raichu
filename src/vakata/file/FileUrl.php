@@ -28,7 +28,7 @@ class FileUrl extends AbstractFile
 			throw new FileException('Error fetching URL', 404);
 		}
 		$this->data['id']			= $path;
-		$this->data['name']			= basename(preg_replace(array('(\?.*$)','(/$)'), '', $path));
+		$this->data['name']			= urldecode(basename(preg_replace(array('(\?.*$)','(/$)'), '', $path)));
 		$this->data['location']		= $path;
 		$this->data['extension']	= substr($this->data['name'], strrpos($this->data['name'], ".") + 1);
 		$this->data['size']			= $size;

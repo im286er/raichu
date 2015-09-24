@@ -10,6 +10,7 @@ class FileUpload extends FileDisk
 		}
 		parent::__construct($directory);
 		$this->data['id'] = $path;
-		$this->data['name'] = implode('.', array_slice(explode('.', $this->data['name']), 1, -2));
+		$this->data['name'] = urldecode(implode('.', array_slice(explode('.', $this->data['name']), 1, -2)));
+		$this->data['extension'] = substr($this->data['name'], strrpos($this->data['name'], ".") + 1);
 	}
 }
