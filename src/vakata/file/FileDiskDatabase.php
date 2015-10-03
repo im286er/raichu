@@ -9,17 +9,17 @@ class FileDiskDatabase extends AbstractFile
 		if (!$temp) {
 			throw new FileException('File not found', 404);
 		}
-		if(!is_file($directory . '/' . $temp['new']) || !is_readable($directory . '/' . $temp['new'])) {
+		if(!is_file($directory . '/' . $temp['location']) || !is_readable($directory . '/' . $temp['location'])) {
 			throw new FileException('File not found', 404);
 		}
 		$this->data['id']			= $temp['id'];
 		$this->data['name']			= $temp['name'];
 		$this->data['extension']	= $temp['ext'];
-		$this->data['size']			= (int)$temp['size'];
+		$this->data['size']			= (int)$temp['bytesize'];
 		$this->data['modified']		= (int)strtotime($temp['uploaded']);
 		$this->data['hash']			= $temp['hash'];
 		$this->data['settings']		= $temp['settings'];
 		$this->data['data']			= '';
-		$this->data['location']		= realpath($directory . DIRECTORY_SEPARATOR . $temp['new']);
+		$this->data['location']		= realpath($directory . DIRECTORY_SEPARATOR . $temp['location']);
 	}
 }

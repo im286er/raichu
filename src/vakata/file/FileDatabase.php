@@ -12,7 +12,7 @@ class FileDatabase extends AbstractFile
 		$this->data['id']			= $temp['id'];
 		$this->data['name']			= $temp['name'];
 		$this->data['extension']	= $temp['ext'];
-		$this->data['size']			= (int)$temp['size'];
+		$this->data['size']			= (int)$temp['bytesize'];
 		$this->data['modified']		= (int)strtotime($temp['uploaded']);
 		$this->data['hash']			= $temp['hash'];
 		$this->data['settings']		= $temp['settings'];

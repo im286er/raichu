@@ -18,11 +18,11 @@ class UploadDiskDatabase extends UploadDisk
 	}
 	public function upload($needle, $chunk = 0, $chunks = 0) {
 		$file = parent::upload($needle, $chunk, $chunks);
-		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE new = ?', array(str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location)));
+		$id = (int)$this->db->one('SELECT id FROM '.$this->tb.' WHERE location = ?', array(str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location)));
 		try {
 			if ($id) {
 				$this->db->query(
-					'UPDATE '.$this->tb.' SET size = ?, uploaded = ?, hash = ? WHERE id = ?',
+					'UPDATE '.$this->tb.' SET bytesize = ?, uploaded = ?, hash = ? WHERE id = ?',
 					array(
 						$file->size,
 						date('Y-m-d H:i:s', $file->modified),
@@ -33,7 +33,7 @@ class UploadDiskDatabase extends UploadDisk
 			}
 			else {
 				$this->db->query(
-					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
+					'INSERT INTO '.$this->tb.' (name, location, ext, bytesize, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
 					array(
 						$this->getName($needle, false),
 						str_replace($this->dr . DIRECTORY_SEPARATOR, '', $file->location),

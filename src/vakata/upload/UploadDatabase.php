@@ -19,7 +19,7 @@ class UploadDatabase extends Upload
 
 		if ($chunks > 0 && $chunk > 0) {
 			$data = $this->db->one(
-				'SELECT id, data FROM '.$this->tb.' WHERE new LIKE ? AND uploaded > ? ORDER BY uploaded DESC',
+				'SELECT id, data FROM '.$this->tb.' WHERE location LIKE ? AND uploaded > ? ORDER BY uploaded DESC',
 				[ $name . '%', date('Y-m-d H:i:s', time() - 24 * 3600) ]
 			);
 			if (!$data) {
@@ -28,7 +28,7 @@ class UploadDatabase extends Upload
 			$data['data'] .= file_get_contents($_FILES[$needle]['tmp_name']);
 			try {
 				$this->db->query(
-					'UPDATE '.$this->tb.' SET size = ?, uploaded = ?, hash = ?, data = ? WHERE id = ?',
+					'UPDATE '.$this->tb.' SET bytesize = ?, uploaded = ?, hash = ?, data = ? WHERE id = ?',
 					array(
 						strlen($data['data']),
 						date('Y-m-d H:i:s'),
@@ -49,14 +49,14 @@ class UploadDatabase extends Upload
 				$full = $name . '.' . $suff;
 			} while (
 				$this->db->one(
-					'SELECT 1 FROM '.$this->tb.' WHERE new = ? AND uploaded > ?',
+					'SELECT 1 FROM '.$this->tb.' WHERE location = ? AND uploaded > ?',
 					[ $full, date('Y-m-d H:i:s', time() - 24 * 3600) ]
 				) && ++$suff < 1000000
 			);
 			try {
 				$data = file_get_contents($_FILES[$needle]['tmp_name']);
 				$id = $this->db->query(
-					'INSERT INTO '.$this->tb.' (name, new, ext, size, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
+					'INSERT INTO '.$this->tb.' (name, location, ext, bytesize, uploaded, hash, settings, data) VALUES (?,?,?,?,?,?,?,?)',
 					array(
 						implode('.', array_slice(explode('.', $name . '.' . $suff), 1, -2)),
 						$name . '.' . $suff,
