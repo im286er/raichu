@@ -151,7 +151,7 @@ class Mysqli extends AbstractDriver
 
 	public function nextr($result) {
 		if ($this->mnd) {
-			return $result->fetch_array(MYSQL_BOTH);
+			return $result->fetch_array(MYSQLI_BOTH);
 		}
 		$ref = $result->result_metadata();
 		if (!$ref) {

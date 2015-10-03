@@ -85,7 +85,7 @@ class Oracle extends AbstractDriver
 		return $sql;
 	}
 	public function nextr($result) {
-		return oci_fetch_array($result, OCI_BOTH);
+		return oci_fetch_array($result, OCI_BOTH + OCI_RETURN_NULLS + OCI_RETURN_LOBS);
 	}
 	public function count($result) {
 		return oci_num_rows($result);
