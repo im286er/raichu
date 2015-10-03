@@ -89,7 +89,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return ArrayLike         Резултат от заявката, който можем да подадем на foreach
 	 */
-	public function get($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
+	public function get($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc_ci', $opti = true) {
 		return (new Query($this->drv, $sql))->execute($data)->result($key, $skip_key, $mode, $opti);
 	}
 	/**
@@ -103,7 +103,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti     Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return array             Резултат от изпълнението
 	 */
-	public function all($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
+	public function all($sql, $data = null, $key = null, $skip_key = false, $mode = 'assoc_ci', $opti = true) {
 		return $this->get($sql, $data, $key, $skip_key, $mode, $opti)->get();
 	}
 	/**
@@ -115,7 +115,7 @@ class DB implements DatabaseInterface
 	 * @param  boolean $opti Ако заявката връща само една стойност - да не се обгражда в масив (включено по подразбиране)
 	 * @return array         Резултат от изпълнението
 	 */
-	public function one($sql, $data = null, $mode = 'assoc', $opti = true) {
+	public function one($sql, $data = null, $mode = 'assoc_ci', $opti = true) {
 		return $this->get($sql, $data, null, false, $mode, $opti)->one();
 	}
 	/**

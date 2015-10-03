@@ -99,7 +99,7 @@ abstract class AbstractDriver implements DriverInterface
 		throw new DatabaseException('Driver does not support affected count');
 	}
 	public function insertId() {
-		throw new DatabaseException('Driver does not support last insert ID');
+		return null;
 	}
 
 	abstract protected function real($sql);

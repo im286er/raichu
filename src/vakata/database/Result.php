@@ -13,7 +13,7 @@ class Result implements ResultInterface, \JsonSerializable
 
 	protected $fake_key	= 0;
 	protected $real_key	= 0;
-	public function __construct(QueryResult $rslt, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
+	public function __construct(QueryResult $rslt, $key = null, $skip_key = false, $mode = 'assoc_ci', $opti = true) {
 		$this->rslt = $rslt;
 		$this->mode = $mode;
 		$this->fake = $key;
@@ -50,6 +50,14 @@ class Result implements ResultInterface, \JsonSerializable
 			case 'both':
 				$row = $tmp;
 				break;
+			case 'assoc_ci':
+				foreach ($tmp as $k => $v) {
+					if (!is_int($k)) {
+						$row[$k] = $v;
+						$row[strtolower($k)] = $row[strtoupper($k)] = &$row[$k];
+					}
+				}
+				break;
 			case 'assoc':
 			default:
 				foreach ($tmp as $k => $v) {
@@ -64,8 +72,15 @@ class Result implements ResultInterface, \JsonSerializable
 		}
 		if ($this->skip) {
 			unset($row[$this->fake]);
+			if ($this->mode === 'assoc_ci') {
+				unset($row[strtolower($this->fake)]);
+				unset($row[strtoupper($this->fake)]);
+			}
 		}
-		if ($this->opti && is_array($row) && count($row) <= 1) {
+		$cnt = $this->mode === 'assoc_ci' ?
+			count(array_unique(array_map('strtolower', array_keys($row)))) :
+			count($row);
+		if ($this->opti && is_array($row) && $cnt <= 1) {
 			$row = count($row) ? current($row) : current($tmp);
 		}
 		return $this->mode === 'obj' && is_array($row) ? (object)$row : $row;
