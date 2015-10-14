@@ -28,7 +28,7 @@ class QueryResult
 	public function __destruct() {
 		$this->free();
 	}
-	public function result($key = null, $skip_key = false, $mode = 'assoc_ci', $opti = true) {
+	public function result($key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
 		return new Result($this, $key, $skip_key, $mode, $opti);
 	}
 	public function row() {

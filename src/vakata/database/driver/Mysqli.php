@@ -76,6 +76,10 @@ class Mysqli extends AbstractDriver
 						$ref[0] .= 'i';
 						$ref[$i+1] =& $data[$i];
 						break;
+					case "NULL":
+						$ref[0] .= 's';
+						$ref[$i+1] =& $data[$i];
+						break;
 					case "double":
 						$ref[0] .= 'd';
 						$ref[$i+1] =& $data[$i];

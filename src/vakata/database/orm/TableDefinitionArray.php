@@ -7,7 +7,7 @@ class TableDefinitionArray implements TableDefinitionInterface, \JsonSerializabl
 
 	public function __construct($table, array $definition = []) {
 		$this->definition = array_merge(
-			[ 'name' => $table, 'primary_key' => [], 'columns' => [], 'definitions' => [], 'indexed' => [], 'searchable' => [] ],
+			[ 'name' => $table, 'primary_key' => [], 'columns' => [], 'definitions' => [] ],
 			$definition
 		);
 	}
@@ -29,12 +29,6 @@ class TableDefinitionArray implements TableDefinitionInterface, \JsonSerializabl
 	}
 	public function getColumns() {
 		return $this->definition['columns'];
-	}
-	public function getIndexed() {
-		return $this->definition['indexed'];
-	}
-	public function getSearchable() {
-		return $this->definition['searchable'];
 	}
 
 	public function toArray() {

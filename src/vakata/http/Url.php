@@ -11,13 +11,10 @@ class Url implements UrlInterface
 	protected $extn = '';
 	protected $domn = '';
 
-	public function __construct() {
+	public function __construct($approot = null, $webroot = null) {
 		$temp = [];
-
-		$this->appr	= defined('APPROOT') ? APPROOT : dirname($_SERVER['SCRIPT_NAME']); // getcwd()
-		$this->webr	= preg_replace('@/+@','/','/'.str_replace('\\',"/",str_replace(str_replace(array('\\','/'), DIRECTORY_SEPARATOR, trim($_SERVER['DOCUMENT_ROOT'],'/\\')), '', $this->appr)).'/');
-		//$this->reqt	= htmlentities(trim(preg_replace(array('(^'.preg_quote($this->webr).')ui','(\?'.preg_quote($_SERVER['QUERY_STRING']).'$)ui'),'',$_SERVER['REQUEST_URI']),'/'));
-		//$this->reqt	= htmlentities(trim(preg_replace(array('(^'.preg_quote($this->webr).')ui'),'',explode('?', $_SERVER['REQUEST_URI'], 2)[0]),'/'));
+		$this->appr	= $approot ? rtrim($approot, '/\\') : dirname($_SERVER['SCRIPT_NAME']); // getcwd()
+		$this->webr	= $webroot ? preg_replace('@/+@','/','/'.$webroot.'/') : preg_replace('@/+@','/','/'.str_replace('\\',"/",str_replace(str_replace(array('\\','/'), DIRECTORY_SEPARATOR, trim($_SERVER['DOCUMENT_ROOT'],'/\\')), '', $this->appr)).'/');
 		$this->reqt	= htmlentities(trim(preg_replace(array('(^'.preg_quote($this->webr).')ui'),'',parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)),'/'));
 		$this->serv	= 'http' . ( !empty($_SERVER['HTTPS']) ? 's' : '' ) . '://' . htmlentities($_SERVER['SERVER_NAME']);
 		$this->segs	= array_filter(explode('/', $this->reqt), function ($var) { return $var !== ''; });
@@ -79,6 +76,9 @@ class Url implements UrlInterface
 			$req = $req . '?' . $params;
 		}
 		return $req;
+	}
+	public function abs($req = '', array $params = null) {
+		return preg_replace('(^([^/]+//)?[^/]+/)', '/', $this->get($req, $params));
 	}
 	public function rel($req = '', array $params = null) {
 		$cur = $this->current(false);

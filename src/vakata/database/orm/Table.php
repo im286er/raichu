@@ -379,26 +379,6 @@ class Table implements TableInterface
 		return $this;
 	}
 
-	public function search($term) {
-		$sql = [];
-		$par = [];
-		if (count($this->definition->getIndexed()) && is_string($term) && strlen($term) >= 4) {
-			$sql[] = 'MATCH ('.implode(', ', $this->definition->getIndexed()).') AGAINST (?)';
-			$par[] = $term;
-		}
-		$like = $this->definition->getSearchable();
-		if (count($like) && is_string($term) && strlen($term)) {
-			$term = '%' . str_replace(['%','_'], ['\\%', '\\_'], $term) . '%';
-			foreach ($like as $fd) {
-				$sql[] = $fd . ' LIKE ?';
-				$par[] = $term;
-			}
-		}
-		if (count($sql)) {
-			$this->where('('.implode(' OR ', $sql).')', $par);
-		}
-		return $this;
-	}
 	public function filter($column, $value) {
 		$column = explode('.', $column, 2);
 		if (count($column) === 1 && in_array($column[0], $this->definition->getColumns())) {

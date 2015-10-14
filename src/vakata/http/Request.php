@@ -3,8 +3,6 @@ namespace vakata\http;
 
 class Request implements RequestInterface
 {
-	use \vakata\user\TraitLogData;
-
 	protected $http = '1.1';
 	protected $body = null;
 	protected $head = [];

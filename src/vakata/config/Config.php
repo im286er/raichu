@@ -10,7 +10,7 @@ class Config
 	}
 
 	public function get($key, $default = null) {
-		$key = explode('.', $key);
+		$key = array_filter(explode('.', $key));
 		$tmp = $this->config;
 		foreach ($key as $k) {
 			if (!isset($tmp[$k])) {
@@ -21,8 +21,8 @@ class Config
 		return $tmp;
 	}
 
-	public  function set($key, $value = null) {
-		$key = explode('.', $key);
+	public function set($key, $value) {
+		$key = array_filter(explode('.', $key));
 		$tmp = &$this->config;
 		foreach ($key as $k) {
 			if (!isset($tmp[$k])) {

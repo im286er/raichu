@@ -1,7 +1,7 @@
 <?php
-namespace vakata\route;
+namespace vakata\router;
 
-class Route
+class Router
 {
 	protected $routes = [];
 	protected $all = null;

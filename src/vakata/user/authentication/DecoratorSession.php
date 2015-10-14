@@ -1,12 +1,11 @@
 <?php
 namespace vakata\user\authentication;
 
+use vakata\user\User;
 use vakata\user\UserException;
 
 class DecoratorSession implements AuthenticationInterface
 {
-	use \vakata\user\TraitLogData;
-
 	protected $settings = '';
 	protected $auth = null;
 
@@ -25,10 +24,10 @@ class DecoratorSession implements AuthenticationInterface
 			$_SESSION[$this->settings['key']] = [];
 		}
 		if (!isset($_SESSION[$this->settings['key']]['ip'])) {
-			$_SESSION[$this->settings['key']]['ip'] = $this->ipAddress();
+			$_SESSION[$this->settings['key']]['ip'] = User::ipAddress();
 		}
 		if (!isset($_SESSION[$this->settings['key']]['ua'])) {
-			$_SESSION[$this->settings['key']]['ua'] = $this->userAgent();
+			$_SESSION[$this->settings['key']]['ua'] = User::userAgent();
 		}
 		if (!isset($_SESSION[$this->settings['key']]['lastlogin'])) {
 			$_SESSION[$this->settings['key']]['lastlogin'] = 0;
@@ -53,8 +52,8 @@ class DecoratorSession implements AuthenticationInterface
 		$temp = $this->auth->authenticate($data);
 		if ($temp) {
 			session_regenerate_id(true);
-			$_SESSION[$this->settings['key']]['ip']             = $this->ipAddress();
-			$_SESSION[$this->settings['key']]['ua']             = $this->userAgent();
+			$_SESSION[$this->settings['key']]['ip']             = User::ipAddress();
+			$_SESSION[$this->settings['key']]['ua']             = User::userAgent();
 			$_SESSION[$this->settings['key']]['lastseen']       = time();
 			$_SESSION[$this->settings['key']]['lastlogin']      = time();
 			$_SESSION[$this->settings['key']]['lastregenerate'] = time();
@@ -69,10 +68,10 @@ class DecoratorSession implements AuthenticationInterface
 		}
 		if (isset($_SESSION[$this->settings['key']]['data'])) {
 			$_SESSION[$this->settings['key']]['newsession'] = $_SESSION[$this->settings['key']]['data']['newsession'] = false;
-			if ($this->settings['match_ip'] && $this->ipAddress() !== $_SESSION[$this->settings['key']]['ip']) {
+			if ($this->settings['match_ip'] && User::ipAddress() !== $_SESSION[$this->settings['key']]['ip']) {
 				throw new UserException('Достъпвате системата от различно IP.');
 			}
-			if ($this->settings['match_user_agent'] && $this->userAgent() !== $_SESSION[$this->settings['key']]['ua']) {
+			if ($this->settings['match_user_agent'] && User::userAgent() !== $_SESSION[$this->settings['key']]['ua']) {
 				throw new UserException('Достъпвате системата от различен браузър.');
 			}
 			if ($this->settings['session_timeout'] && time() - (int)$_SESSION[$this->settings['key']]['lastseen'] >= $this->settings['session_timeout']) {

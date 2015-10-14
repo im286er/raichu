@@ -8,7 +8,7 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 	protected $definition = [];
 
 	public function __construct(DatabaseInterface $database, $table, array $searchable = []) {
-		$this->definition = [ 'name' => $table, 'primary_key' => [], 'columns' => [], 'definitions' => [], 'indexed' => [], 'searchable' => [] ];
+		$this->definition = [ 'name' => $table, 'primary_key' => [], 'columns' => [], 'definitions' => [], 'indexed' => [] ];
 		switch ($database->driver()) {
 			case 'mysql':
 			case 'mysqli':
@@ -36,7 +36,6 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 			default:
 				throw new ORMException('Driver is not supported: ' . $database->driver(), 500);
 		}
-		$this->definition['searchable'] = array_intersect($this->definition['columns'], $searchable);
 	}
 	public function __get($key) {
 		if (isset($this->definition[$key])) {
@@ -56,12 +55,6 @@ class TableDefinition implements TableDefinitionInterface, \JsonSerializable
 	}
 	public function getColumns() {
 		return $this->definition['columns'];
-	}
-	public function getIndexed() {
-		return $this->definition['indexed'];
-	}
-	public function getSearchable() {
-		return $this->definition['searchable'];
 	}
 
 	public function toArray() {

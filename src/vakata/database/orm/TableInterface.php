@@ -18,7 +18,6 @@ interface TableInterface extends \Iterator, \ArrayAccess, \Countable, \JsonSeria
 	public function where($sql, array $params = []);
 	public function order($order, $raw = false);
 
-	public function search($term);
 	public function filter($column, $value);
 
 	public function count();

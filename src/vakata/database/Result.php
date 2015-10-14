@@ -13,7 +13,7 @@ class Result implements ResultInterface, \JsonSerializable
 
 	protected $fake_key	= 0;
 	protected $real_key	= 0;
-	public function __construct(QueryResult $rslt, $key = null, $skip_key = false, $mode = 'assoc_ci', $opti = true) {
+	public function __construct(QueryResult $rslt, $key = null, $skip_key = false, $mode = 'assoc', $opti = true) {
 		$this->rslt = $rslt;
 		$this->mode = $mode;
 		$this->fake = $key;
@@ -55,6 +55,20 @@ class Result implements ResultInterface, \JsonSerializable
 					if (!is_int($k)) {
 						$row[$k] = $v;
 						$row[strtolower($k)] = $row[strtoupper($k)] = &$row[$k];
+					}
+				}
+				break;
+			case 'assoc_lc':
+				foreach ($tmp as $k => $v) {
+					if (!is_int($k)) {
+						$row[strtolower($k)] = $v;
+					}
+				}
+				break;
+			case 'assoc_uc':
+				foreach ($tmp as $k => $v) {
+					if (!is_int($k)) {
+						$row[strtoupper($k)] = $v;
 					}
 				}
 				break;

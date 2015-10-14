@@ -22,14 +22,14 @@ class UploadDisk extends Upload implements UploadInterface
 		}
 	}
 
-	protected function getName($needle, $fixed = true) {
+	protected function getName($needle, $fixed = true, $chunk = 0, $chunks = 0) {
 		$name = $_FILES[$needle]['name'] === 'blob' && isset($_POST["name"]) ?
 			$_POST["name"] :
 			$_FILES[$needle]['name'];
 		$name = basename($name);
 
 		if ($fixed) {
-			$prefix = md5(session_id() . '/' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''));
+			$prefix = md5($chunk . '/' . $chunks . '/' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . '/' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''));
 			$dotp = strrpos($name, ".");
 			if ($dotp === false) {
 				$extn = '';
@@ -51,7 +51,7 @@ class UploadDisk extends Upload implements UploadInterface
 		$this->check($needle);
 
 		$prefix = date('Y/m/d');
-		$name = $this->getName($needle);
+		$name = $this->getName($needle, true, $chunk, $chunks);
 
 		// just in case chunked upload spans over two days
 		if ($chunk && !file_exists($this->dir . '/' . $prefix . '/' . $name . '.0')) {

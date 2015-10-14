@@ -14,9 +14,6 @@ interface RequestInterface extends MessageInterface
 
 	public function getFile($key = null);
 
-	public function userAgent();
-	public function ipAddress();
-	
 	public function isAjax();
 	public function isCors();
 	public function isSecure();

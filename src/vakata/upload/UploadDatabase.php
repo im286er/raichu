@@ -15,7 +15,7 @@ class UploadDatabase extends Upload
 		$this->tb = $tb;
 	}
 	public function upload($needle, $chunk = 0, $chunks = 0) {
-		$name = $this->getName($needle);
+		$name = $this->getName($needle, true, $chunk, $chunks);
 
 		if ($chunks > 0 && $chunk > 0) {
 			$data = $this->db->one(

@@ -68,10 +68,13 @@ class Log implements LogInterface
 			mkdir($directory, 0644, true);
 		}
 		return (bool)@error_log(
-			date("[d-M-Y H:i:s e] ") . $message . "\n" . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n",
+			date("[d-M-Y H:i:s e] ") . $message . "\n" . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_FORCE_OBJECT) . "\n\n",
 			3,
 			$directory . '/' . $this->getLevel($severity) . '.log'
 		);
+	}
+	public function addContext($context) {
+		$this->additional_context = array_merge($this->additional_context, $context);
 	}
 
 	public function emergency($message, array $context = []) {

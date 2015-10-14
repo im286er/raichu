@@ -1,7 +1,7 @@
 <?php
 namespace vakata\di;
 
-class Di
+class DI implements DIInterface
 {
 	protected $replacements = [];
 	protected $instances = [];
@@ -42,32 +42,35 @@ class Di
 		return $arguments;
 	}
 
-	public function register($alias, $class, array $defaults = [], $single_instance = false) {
+	public function register($alias, $class, array $defaults = [], $single = false) {
 		if (!is_array($alias)) {
 			$alias = [$alias];
 		}
+		if (is_object($class)) {
+			$single = true;
+			$temp = '\\' . get_class($class);
+			$this->instances[$temp] = $class;
+			$class = $temp;
+		}
 		foreach ($alias as $name) {
-			$this->replacements[strtolower($name)] = [ $class, $defaults, $single_instance ];
+			$this->replacements[strtolower($name)] = [ $class, $defaults, $single ];
 		}
 	}
 
-	public function instance($class, array $arguments = [], $named_only = false) {
-		if ($named_only && !isset($this->replacements[strtolower($class)])) {
-			throw new DiException('Class not found', 404);
-		}
-		$single = false;
+	public function instance($class, array $arguments = [], $single = false) {
 		$defaults = [];
 		if (isset($this->replacements[strtolower($class)])) {
 			list($class, $defaults, $single) = $this->replacements[strtolower($class)];
+			$prepend = [];
 			foreach ($arguments as $k => $v) {
 				if (is_int($k)) {
-					array_unshift($defaults, $v);
+					$prepend[] = $v;
 				}
 				else {
 					$defaults[$k] = $v;
 				}
 			}
-			$arguments = $defaults;
+			$arguments = array_merge($prepend, $defaults);
 		}
 		if ($single && isset($this->instances[$class])) {
 			return $this->instances[$class];
@@ -89,8 +92,8 @@ class Di
 			}
 			return $instance;
 		}
-		catch(\ReflectionException $ignore) {
-			throw new DiException('Could not create instance');
+		catch(\ReflectionException $e) {
+			throw new DIException('Could not create instance - ' . $e->getMessage());
 		}
 	}
 
@@ -112,15 +115,15 @@ class Di
 		}
 	}
 
-	public function invoke($class, $method, array $arguments = [], array $construct = [], $named_only = false) {
-		$instance = is_string($class) ? $this->instance($class, $construct, $named_only) : $class;
+	public function invoke($class, $method, array $arguments = [], array $construct = []) {
+		$instance = is_string($class) ? $this->instance($class, $construct) : $class;
 		$class = get_class($instance);
 
 		try {
 			$reflection = new \ReflectionMethod($instance, $method);
 		}
 		catch(\ReflectionException $e) {
-			throw new DiException('Could not invoke method');
+			throw new DIException('Could not invoke method');
 		}
 		$arguments = $this->arguments($reflection, $arguments);
 
@@ -157,7 +160,7 @@ class Di
 			$rslt = $reflection->invokeArgs($instance, $arguments);
 		}
 		catch(\ReflectionException $e) {
-			throw new DiException('Error invoking method');
+			throw new DIException('Error invoking method');
 		}
 
 		foreach ($execute['after'] as $cb) {
@@ -170,9 +173,5 @@ class Di
 			]);
 		}
 		return $rslt;
-	}
-
-	public function __call($class, array $arguments = []) {
-		return $this->instance($class, $arguments, true);
 	}
 }

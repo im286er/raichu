@@ -115,6 +115,7 @@ class Lang
 			return null;
 		}
 		$tmp = explode('.', $key);
+		$tmp = array_filter($tmp);
 		$val = $this->lang[$code];
 		foreach ($tmp as $k) {
 			if (!isset($val[$k])) {

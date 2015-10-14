@@ -1,12 +1,11 @@
 <?php
 namespace vakata\user\authentication;
 
+use vakata\user\User;
 use vakata\user\UserException;
 
 class Password extends AbstractAuthentication
 {
-	use \vakata\user\TraitLogData;
-
 	protected $db = null;
 	protected $tb = null;
 	protected $settings = null;
@@ -35,7 +34,7 @@ class Password extends AbstractAuthentication
 			}
 			$id = $this->validateChange($tmp['password_id'], $data);
 			$this->db->query('UPDATE '.$this->tb.'_restore SET used = 1 WHERE hash = ? AND used = 0', array($data['forgotpassword']));
-			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($id, 'login', date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()));
+			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($id, 'login', date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()));
 			$temp = $this->db->one("SELECT * FROM " . $this->tb . " WHERE id = ?", [$id]);
 			return $this->filterReturn($temp);
 		}
@@ -46,7 +45,7 @@ class Password extends AbstractAuthentication
 		$username = $data['username'];
 		$password = $data['password'];
 
-		if ((int)$this->settings['ip_errors'] && (int)$this->db->one('SELECT COUNT(*) FROM ' . $this->tb . '_log WHERE ip = ? AND action = \'error\' AND created > NOW() - INTERVAL 1 HOUR', array($this->ipAddress())) > (int)$this->settings['ip_errors']) {
+		if ((int)$this->settings['ip_errors'] && (int)$this->db->one('SELECT COUNT(*) FROM ' . $this->tb . '_log WHERE ip = ? AND action = \'error\' AND created > NOW() - INTERVAL 1 HOUR', array(User::ipAddress())) > (int)$this->settings['ip_errors']) {
 			throw new UserException('IP адресът е блокиран за един час след ' . (int)$this->settings['ip_errors'] . ' грешни опита.');
 		}
 		$tmp = $this->db->one('SELECT id, username, password, created FROM ' . $this->tb . ' WHERE username = ? ORDER BY created DESC LIMIT 1', array($username));
@@ -81,15 +80,15 @@ class Password extends AbstractAuthentication
 			throw new UserException('Потребителят не може да влиза с парола.');
 		}
 		if ($password === $tmp['password']) {
-			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'login', date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()));
+			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'login', date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()));
 			$temp = $this->db->one('SELECT * FROM ' . $this->tb . ' WHERE id = ?', [ $this->validateChange($tmp['id'], $data) ]);
 			return $this->filterReturn($temp);
 		}
 		if (!password_verify($password, $tmp['password'])) {
-			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'error', date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()));
+			$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'error', date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()));
 			throw new UserException('Грешна парола.');
 		}
-		$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'login', date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()));
+		$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($tmp['id'], 'login', date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()));
 		if (
 			((int)$this->settings['force_changepass'] && isset($tmp['created']) && time() - strtotime($tmp['created']) > (int)$this->settings['force_changepass']) ||
 			(isset($data['password1']) && isset($data['password2']) && isset($data['changepassword']) && (int)$data['changepassword'])
@@ -112,7 +111,7 @@ class Password extends AbstractAuthentication
 			$hsh = md5($e['id'] . $m . time() . rand(0,9));
 			if ($this->db->query(
 				"INSERT INTO ".$this->tb."_restore (hash, password_id, created, ip, ua) VALUES (?,?,?,?,?)",
-				[$hsh, $e['id'], date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()]
+				[$hsh, $e['id'], date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()]
 			)->affected()) {
 				return array('id' => $m, 'token' => $hsh, 'provider' => $this->provider()); //, 'is_mail' => filter_var($m, FILTER_VALIDATE_EMAIL));
 			}
@@ -136,7 +135,7 @@ class Password extends AbstractAuthentication
 	protected function changePassword($id, $password) {
 		//$username = $this->db->one("SELECT username FROM ".$this->tb." WHERE id = ?", [$id]);
 		//return $this->db->query("INSERT INTO ".$this->tb." (username, password, created) VALUES(?,?,?)", [$username, password_hash($password, PASSWORD_DEFAULT), date('Y-m-d H:i:s')])->insertId();
-		$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($id, 'change', date('Y-m-d H:i:s'), $this->ipAddress(), $this->userAgent()));
+		$this->db->query('INSERT INTO '.$this->tb.'_log (password_id, action, created, ip, ua) VALUES(?,?,?,?,?)', array($id, 'change', date('Y-m-d H:i:s'), User::ipAddress(), User::userAgent()));
 		$this->db->query("UPDATE ".$this->tb." SET password = ?, created = ? WHERE id = ?", array(password_hash($password, PASSWORD_DEFAULT), date('Y-m-d H:i:s'), $id));
 		return $id;
 	}

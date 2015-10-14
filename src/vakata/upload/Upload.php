@@ -18,11 +18,11 @@ abstract class Upload implements UploadInterface
 			throw new UploadException('File upload invalid filesize', 404);
 		}
 	}
-	protected function getName($needle, $fixed = true) {
+	protected function getName($needle, $fixed = true, $chunk = 0, $chunks = 0) {
 		$name = $_FILES[$needle]['name'] === 'blob' && isset($_POST["name"]) ?
 			$_POST["name"] :
 			$_FILES[$needle]['name'];
-		$prefix = md5(session_id() . '/' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''));
+		$prefix = md5($chunk . '/' . $chunks . '/' . (isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '') . '/' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''));
 		return $fixed ? substr($prefix, 0, 10) . '.' . basename($name) . '.up' : basename($name);
 	}
 
