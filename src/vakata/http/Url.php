@@ -21,6 +21,12 @@ class Url implements UrlInterface
 		$this->extn	= strpos($this->reqt,'.') ? substr($this->reqt, strrpos($this->reqt, '.') + 1) : '';
 		$this->domn	= trim(preg_replace('@^www\.@', '', htmlentities($_SERVER['SERVER_NAME'])),'/');
 		$this->extn = preg_match('(\.([a-z0-9]{2,4})$)i', $_SERVER['REQUEST_URI'], $temp) ? $temp[1] : '';
+		if (
+			(!empty($_SERVER['HTTPS']) && (int)$_SERVER['SERVER_PORT'] !== 443) ||
+			(empty($_SERVER['HTTPS']) && (int)$_SERVER['SERVER_PORT'] !== 80)
+		) {
+			$this->serv .= ':' . (int)$_SERVER['SERVER_PORT'];
+		}
 	}
 
 	public function current($withQuery = true) {
