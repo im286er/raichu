@@ -86,7 +86,8 @@ class Url implements UrlInterface
 	public function abs($req = '', array $params = null) {
 		return preg_replace('(^([^/]+//)?[^/]+/)', '/', $this->get($req, $params));
 	}
-	public function rel($req = '', array $params = null) {
+	public function rel($req = '', array $params = null, $relative_to = null) {
+		$cur = $relative_to ? $this->get($relative_to) : $this->current(false);
 		$cur = $this->current(false);
 		$bas = trim($this->base(),'/');
 		$cur = trim(str_replace($bas, '', $cur), '/');
